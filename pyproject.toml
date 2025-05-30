@@ -1,0 +1,100 @@
+[project]
+name = "llmit"
+authors = [
+    {name="Zoë Farmer", email="zfarmer@squareup.com"},
+    {name="Chase Hudson", email="chasehudson@squareup.com"},
+]
+version = "1.0.1"
+description = "Assists with git workflows using LLMs."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "beaupy>=3.10.1",
+    "gitpython>=3.1.44",
+    "openai>=1.82.0",
+    "pyyaml>=6.0.2",
+    "typer>=0.15",
+]
+[dependency-groups]
+dev = [
+    "hatchling>=1.27.0",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.12",
+    "mkdocstrings[python]>=0.29.1",
+    "pytest>=8.3.5",
+    "pytest-cov>=6.1.1",
+    "ruff>=0.11.6",
+]
+
+[external]
+dependencies = [
+    'pkg:generic/git',
+    'pkg:generic/tree',
+]
+
+[project.scripts]
+llmit = "llmit:app"
+
+[tool.uv]
+resolution = "highest"
+
+[[tool.uv.index]]
+url = "https://artifactory.global.square/artifactory/api/pypi/block-pypi/simple"
+publish-url = "https://artifactory.global.square/artifactory/api/pypi/block-pypi/simple"
+default = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+# Pulled from here: https://docs.astral.sh/ruff/configuration/
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+ignore = ["F401"]
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.12"
+implicit_optional = true
+ignore_missing_imports = true
