@@ -1,5 +1,5 @@
 """
-LLMIT - LLM-powered Git Commit Message Generator
+DiffWeave - LLM-powered Git Commit Message Generator
 
 This module provides tools for generating git commit messages using LLMs.
 It includes functionality for interacting with git repositories, configuring

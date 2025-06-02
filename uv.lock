@@ -247,6 +247,49 @@ toml = [
 ]
 
 [[package]]
+name = "diffweave-ai"
+version = "1.0.1"
+source = { editable = "." }
+dependencies = [
+    { name = "beaupy" },
+    { name = "gitpython" },
+    { name = "openai" },
+    { name = "pyyaml" },
+    { name = "typer" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "hatchling" },
+    { name = "mkdocs" },
+    { name = "mkdocs-material" },
+    { name = "mkdocstrings", extra = ["python"] },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "beaupy", specifier = ">=3.10.1" },
+    { name = "gitpython", specifier = ">=3.1.44" },
+    { name = "openai", specifier = ">=1.82.0" },
+    { name = "pyyaml", specifier = ">=6.0.2" },
+    { name = "typer", specifier = ">=0.15" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "hatchling", specifier = ">=1.27.0" },
+    { name = "mkdocs", specifier = ">=1.6.1" },
+    { name = "mkdocs-material", specifier = ">=9.6.12" },
+    { name = "mkdocstrings", extras = ["python"], specifier = ">=0.29.1" },
+    { name = "pytest", specifier = ">=8.3.5" },
+    { name = "pytest-cov", specifier = ">=6.1.1" },
+    { name = "ruff", specifier = ">=0.11.6" },
+]
+
+[[package]]
 name = "distro"
 version = "1.9.0"
 source = { registry = "https://artifactory.global.square/artifactory/api/pypi/block-pypi/simple" }
@@ -501,49 +544,6 @@ wheels = [
     { url = "https://artifactory.global.square/artifactory/api/pypi/block-pypi/packages/packages/9b/1d/23c41765cc95c0e23ac492a88450d34bf0fd87a37218d1b97000bffe0f53/jiter-0.10.0-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:9ab7fd8738094139b6c1ab1822d6f2000ebe41515c537235fd45dabe13ec9324" },
     { url = "https://artifactory.global.square/artifactory/api/pypi/block-pypi/packages/packages/9f/14/381d8b151132e79790579819c3775be32820569f23806769658535fe467f/jiter-0.10.0-cp39-cp39-win32.whl", hash = "sha256:5f51e048540dd27f204ff4a87f5d79294ea0aa3aa552aca34934588cf27023cf" },
     { url = "https://artifactory.global.square/artifactory/api/pypi/block-pypi/packages/packages/59/66/f23ae51dea8ee8ce429027b60008ca895d0fa0704f0c7fe5f09014a6cffb/jiter-0.10.0-cp39-cp39-win_amd64.whl", hash = "sha256:1b28302349dc65703a9e4ead16f163b1c339efffbe1049c30a44b001a2a4fff9" },
-]
-
-[[package]]
-name = "llmit"
-version = "1.0.1"
-source = { editable = "." }
-dependencies = [
-    { name = "beaupy" },
-    { name = "gitpython" },
-    { name = "openai" },
-    { name = "pyyaml" },
-    { name = "typer" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "hatchling" },
-    { name = "mkdocs" },
-    { name = "mkdocs-material" },
-    { name = "mkdocstrings", extra = ["python"] },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "beaupy", specifier = ">=3.10.1" },
-    { name = "gitpython", specifier = ">=3.1.44" },
-    { name = "openai", specifier = ">=1.82.0" },
-    { name = "pyyaml", specifier = ">=6.0.2" },
-    { name = "typer", specifier = ">=0.15" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "hatchling", specifier = ">=1.27.0" },
-    { name = "mkdocs", specifier = ">=1.6.1" },
-    { name = "mkdocs-material", specifier = ">=9.6.12" },
-    { name = "mkdocstrings", extras = ["python"], specifier = ">=0.29.1" },
-    { name = "pytest", specifier = ">=8.3.5" },
-    { name = "pytest-cov", specifier = ">=6.1.1" },
-    { name = "ruff", specifier = ">=0.11.6" },
 ]
 
 [[package]]

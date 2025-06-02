@@ -1,6 +1,5 @@
-site_name: LLMIt!
-repo_url: https://github.com/squareup/llmit
-site_url: https://special-guide-7j359k7.pages.github.io/
+site_name: DiffWeave
+repo_url: https://github.com/block/diffweave-ai
 nav:
   - Home: index.md
 theme:
