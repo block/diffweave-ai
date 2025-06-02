@@ -42,7 +42,7 @@ def get_repo() -> git.Repo:
 def generate_diffs_with_context(current_repo: git.Repo):
     console = rich.console.Console()
 
-    console.print(f"Generating diffs for staged files...", style="bold")
+    console.print("Generating diffs for staged files...", style="bold")
 
     project_root = pathlib.Path(current_repo.working_dir)
 
@@ -135,7 +135,7 @@ def add_files(current_repo: git.Repo, interactive: bool = True):
     formatted_paths = "\n".join(str(p.relative_to(git_repo_root)) for p in unstaged_files)
 
     try:
-        utils.run_cmd(f"tree --fromfile", input=formatted_paths)
+        utils.run_cmd("tree --fromfile", input=formatted_paths)
     except SystemError:
         pass
 

@@ -9,8 +9,14 @@ import rich.text
 import rich.panel
 import yaml
 
-CONFIG_DIRECTORY = Path().home() / ".config" / "llmit"
+CONFIG_BASEDIR = Path().home() / ".config"
+CONFIG_DIRECTORY = CONFIG_BASEDIR / "diffweave"
 CONFIG_FILE = CONFIG_DIRECTORY / "config.yaml"
+LEGACY_CONFIG = CONFIG_BASEDIR / 'llmit' / 'config.yaml'
+# Check if the legacy config file exists and copy it to the new location if needed
+if (not CONFIG_FILE.exists()) and LEGACY_CONFIG.exists():
+    CONFIG_DIRECTORY.mkdir(parents=True, exist_ok=True)
+    CONFIG_FILE.write_text(LEGACY_CONFIG.read_text())
 
 
 def configure_custom_model(model_name: str, endpoint: str, token: str, config_file: Path = CONFIG_FILE):

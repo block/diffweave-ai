@@ -11,10 +11,10 @@ alias fmt := format
 
 # Run Tests (can specify which file to run!)
 test target='tests/':
-    uv run pytest --cov=llmit -cov-branch {{ target }}
+    uv run pytest --cov=diffweave -cov-branch {{ target }}
 
 commit:
-    uv run llmit commit
+    uv run diffweave commit
 
 docs:
     uv run mkdocs build

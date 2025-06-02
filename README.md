@@ -1,6 +1,6 @@
-# LLMIt
+# DiffWeave AI
 
-LLMIt is a tool that automatically generates meaningful Git commit messages using large language models (LLMs). It analyzes your staged changes and creates descriptive commit messages, saving you time and ensuring consistent documentation.
+DiffWeave is a tool that automatically generates meaningful Git commit messages using large language models (LLMs). It analyzes your staged changes and creates descriptive commit messages, saving you time and ensuring consistent documentation.
 
 [Documentation available here](https://special-guide-7j359k7.pages.github.io/)
 
@@ -8,21 +8,21 @@ LLMIt is a tool that automatically generates meaningful Git commit messages usin
 
 ## Installation & Quick Start
 
-LLMIt is installed as an isolated tool using `uv`:
+DiffWeave is installed as an isolated tool using `uv`:
 
 ```bash
 # Make sure you have uv installed first
 # https://docs.astral.sh/uv/getting-started/installation/
 
-uvx llmit
+uvx diffweave-ai
 ```
 
 ```bash
 # Basic usage
-uvx llmit commit
+uvx diffweave commit
 
 # With specific model
-uvx llmit commit --model "your-model-name"
+uvx diffweave commit --model "your-model-name"
 ```
 
 ## Features

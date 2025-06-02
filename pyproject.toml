@@ -1,10 +1,10 @@
 [project]
-name = "llmit"
+name = "diffweave-ai"
 authors = [
     {name="Zoë Farmer", email="zfarmer@squareup.com"},
     {name="Chase Hudson", email="chasehudson@squareup.com"},
 ]
-version = "1.0.1"
+version = "1.0.0"
 description = "Assists with git workflows using LLMs."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -33,19 +33,17 @@ dependencies = [
 ]
 
 [project.scripts]
-llmit = "llmit:app"
+diffweave = "diffweave:app"
 
 [tool.uv]
 resolution = "highest"
 
-[[tool.uv.index]]
-url = "https://artifactory.global.square/artifactory/api/pypi/block-pypi/simple"
-publish-url = "https://artifactory.global.square/artifactory/api/pypi/block-pypi/simple"
-default = true
-
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["diffweave"]
 
 [tool.ruff]
 # Pulled from here: https://docs.astral.sh/ruff/configuration/
