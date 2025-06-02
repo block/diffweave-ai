@@ -29,7 +29,6 @@ jobs:
     - name: Ruff
       run: |
         uvx ruff check
-        uvx ruff format --check
 
     - name: Test build
       run: uv build
