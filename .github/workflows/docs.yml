@@ -38,6 +38,8 @@ jobs:
 
       - name: Install dependencies
         run: |
+          uv lock
+          uv venv
           uv sync --frozen --verbose
 
       - name: Build website

@@ -47,7 +47,7 @@ def run_cmd(cmd: str, show_output: bool = True, silent: bool = False, **subproce
 
     if not silent:
         console.print(
-            rich.console.Group(rich.text.Text(f"$~~>", end=" "), rich.text.Text(f"{cmd}", style="bold green"))
+            rich.console.Group(rich.text.Text("$~~>", end=" "), rich.text.Text(f"{cmd}", style="bold green"))
         )
 
     if process.returncode != 0:
