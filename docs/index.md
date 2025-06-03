@@ -32,7 +32,7 @@ of python and all required dependencies!
 #### Configuring the completion endpoint
 
 ```bash
-uvx diffweave add-custom-model \
+uvx diffweave-ai add-custom-model \
     --model "name-of-your-model" \
     --endpoint "https://endpoint-url" \
     --token $TOKEN
@@ -46,7 +46,7 @@ this token!
 Get a token from Databricks and set it as the environment variable `DATABRICKS_TOKEN`:
 
 ```bash
-uvx diffweave add-custom-model \
+uvx diffweave-ai add-custom-model \
     --model "claude-3-7-sonnet" \
     --endpoint "https://block-lakehouse-production.cloud.databricks.com/serving-endpoints" \
     --token $DATABRICKS_TOKEN
@@ -57,7 +57,7 @@ uvx diffweave add-custom-model \
 Finally, in order to ensure that `diffweave` uses the model you just configured, you need to set it as the default model:
 
 ```bash
-uvx diffweave set-default-llm-model claude-3-7-sonnet
+uvx diffweave-ai set-default-llm-model claude-3-7-sonnet
 ```
 
 #### Using diffweave
@@ -65,11 +65,11 @@ uvx diffweave set-default-llm-model claude-3-7-sonnet
 Basic usage - examine the current repo, stage files for commit, and generate a commit message:
 
 ```bash
-uvx diffweave commit
+uvx diffweave-ai commit
 ```
 
 If you want to specify the model to run you can add the `--model` flag:
 
 ```bash
-uvx diffweave commit --model "claude-3-7-sonnet"
+uvx diffweave-ai commit --model "claude-3-7-sonnet"
 ```

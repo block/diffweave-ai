@@ -2,7 +2,7 @@
 
 DiffWeave is a tool that automatically generates meaningful Git commit messages using large language models (LLMs). It analyzes your staged changes and creates descriptive commit messages, saving you time and ensuring consistent documentation.
 
-[Documentation available here](https://special-guide-7j359k7.pages.github.io/)
+[Documentation available here](https://block.github.io/diffweave-ai/)
 
 ![Demo](docs/images/demo.png)
 
@@ -19,10 +19,10 @@ uvx diffweave-ai
 
 ```bash
 # Basic usage
-uvx diffweave commit
+uvx diffweave-ai commit
 
 # With specific model
-uvx diffweave commit --model "your-model-name"
+uvx diffweave-ai commit --model "your-model-name"
 ```
 
 ## Features
