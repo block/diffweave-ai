@@ -4,7 +4,7 @@ authors = [
     {name="Zoë Farmer", email="zfarmer@squareup.com"},
     {name="Chase Hudson", email="chasehudson@squareup.com"},
 ]
-version = "1.0.0"
+version = "1.0.1"
 description = "Assists with git workflows using LLMs."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -33,7 +33,7 @@ dependencies = [
 ]
 
 [project.scripts]
-diffweave = "diffweave:app"
+diffweave-ai = "diffweave:app"
 
 [tool.uv]
 resolution = "highest"
