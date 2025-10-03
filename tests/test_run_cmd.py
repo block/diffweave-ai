@@ -4,7 +4,8 @@ import diffweave
 
 
 def test_running_commands():
-    assert len(diffweave.run_cmd("find .").splitlines()) > 1
+    stdout, stderr = diffweave.run_cmd("find .")
+    assert len(stdout.splitlines()) > 1
 
 
 def test_bad_command():
@@ -14,4 +15,5 @@ def test_bad_command():
 
 def test_piping():
     content = "foo bar biz baz"
-    assert content == diffweave.run_cmd("cat", input=content)
+    stdout, stderr = diffweave.run_cmd("cat", input=content)
+    assert content == stdout
