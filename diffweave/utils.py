@@ -1,6 +1,4 @@
-import sys
 import subprocess
-from typing import Union
 
 import rich
 import rich.panel
@@ -11,7 +9,7 @@ import rich.text
 import rich.padding
 
 
-def run_cmd(cmd: str, show_output: bool = True, silent: bool = False, **subprocess_kwargs) -> Union[None, str]:
+def run_cmd(cmd: str, show_output: bool = True, silent: bool = False, **subprocess_kwargs) -> tuple[None | str, None | str]:
     """
     Execute a shell command and handle its output.
 
@@ -65,4 +63,4 @@ def run_cmd(cmd: str, show_output: bool = True, silent: bool = False, **subproce
             rich.padding.Padding(rich.text.Text("result truncated", style="lightgrey"), (0, 0, 0, 2), style="dim")
         )
 
-    return output
+    return output, error

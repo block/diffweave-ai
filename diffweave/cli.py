@@ -58,14 +58,19 @@ def commit(model: Annotated[str, typer.Option(help="Internal Databricks model to
 
     try:
         msg = llm.iterate_on_commit_message(repo_status_prompt, context)
-        run_cmd(f"git commit -m {shlex.quote(msg)}")
+        try:
+            run_cmd(f"git commit -m {shlex.quote(msg)}")
+        except SystemError:
+            console.print("Uh oh, something happened while committing. Trying again!")
+            repo.add_files(current_repo)
+            run_cmd(f"git commit -m {shlex.quote(msg)}")
 
         console.print(rich.text.Text(r"Push? <enter>/y for yes, anything else for no", style="yellow"))
         should_push = console.input(r"> ").strip().lower()
         if should_push in ["", "y", "yes"]:
-            push_result = run_cmd("git push")
+            push_result, error = run_cmd("git push")
 
-            if "http" in push_result:
+            if "http" in push_result + error:
                 open_pr = (
                     console.input(r"Open Pull Request (PR)? <enter>/y for yes, anything else for no:\n> ")
                     .strip()
