@@ -61,7 +61,7 @@ def commit(model: Annotated[str, typer.Option(help="Internal Databricks model to
         try:
             run_cmd(f"git commit -m {shlex.quote(msg)}")
         except SystemError:
-            console.print(f"Uh oh, something happened while committing. Trying again!")
+            console.print("Uh oh, something happened while committing. Trying again!")
             repo.add_files(current_repo)
             run_cmd(f"git commit -m {shlex.quote(msg)}")
 
