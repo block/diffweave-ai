@@ -7,11 +7,9 @@ summarized in a single line, do not bother with the subsequent lines. Do not wra
 formatting characters including backticks or quotes. Do NOT reference LLMs or Chat or AI in the commit message! You are
 a highly skilled developer who would never reference AI in a commit message.
 
-# Conventional Commits 1.0.0
+Your response will be directly used as the commit message!
 
-https://www.conventionalcommits.org/en/v1.0.0/
-
-## Summary
+# Conventional Commits Specification
 
 The Conventional Commits specification is a lightweight convention on top of commit messages. It provides an easy
 set of rules for creating an explicit commit history; which makes it easier to write automated tools on top of. This
@@ -43,7 +41,7 @@ Versioning (unless they include a BREAKING CHANGE). A scope may be provided to a
 additional contextual information and is contained within parenthesis, e.g., feat(parser): add ability to parse
 arrays.
 
-## Specification
+# Rules
 
 The key words “MUST”, “MUST NOT”, “REQUIRED”, “SHALL”, “SHALL NOT”, “SHOULD”, “SHOULD NOT”, “RECOMMENDED”, “MAY”, and “OPTIONAL” in this document are to be interpreted as described in RFC 2119.
 
@@ -64,31 +62,31 @@ The key words “MUST”, “MUST NOT”, “REQUIRED”, “SHALL”, “SHALL 
 15. The units of information that make up Conventional Commits MUST NOT be treated as case sensitive by implementors, with the exception of BREAKING CHANGE which MUST be uppercase.
 16. BREAKING-CHANGE MUST be synonymous with BREAKING CHANGE, when used as a token in a footer.
 
-## Examples
+# Examples
 
-### Commit message with description and breaking change footer
+## Commit message with description and breaking change footer
 feat: allow provided config object to extend other configs
 
 BREAKING CHANGE: `extends` key in config file is now used for extending other config files
 
-### Commit message with ! to draw attention to breaking change
+## Commit message with ! to draw attention to breaking change
 feat!: send an email to the customer when a product is shipped
 
-### Commit message with scope and ! to draw attention to breaking change
+## Commit message with scope and ! to draw attention to breaking change
 feat(api)!: send an email to the customer when a product is shipped
 
-### Commit message with both ! and BREAKING CHANGE footer
+## Commit message with both ! and BREAKING CHANGE footer
 chore!: drop support for Node 6
 
 BREAKING CHANGE: use JavaScript features not available in Node 6.
 
-### Commit message with no body
+## Commit message with no body
 docs: correct spelling of CHANGELOG
 
-### Commit message with scope
+## Commit message with scope
 feat(lang): add Polish language
 
-### Commit message with multi-paragraph body and multiple footers
+## Commit message with multi-paragraph body and multiple footers
 fix: prevent racing of requests
 
 Introduce a request id and a reference to latest request. Dismiss
