@@ -77,8 +77,8 @@ def commit(model: Annotated[str, typer.Option(help="Internal Databricks model to
                     .lower()
                 )
                 if open_pr in ["", "y", "yes"]:
-                    pr_url = re.match(r"\s+(https?://.+?$)", push_result, re.IGNORECASE)
-                    webbrowser.open(pr_url.group(1))
+                    if pr_url := re.match(r"\s+(https?://.+?$)", push_result, re.IGNORECASE):
+                        webbrowser.open(pr_url.group(1))
 
     except (KeyboardInterrupt, EOFError):
         console.print(rich.text.Text("Cancelled..."), style="bold red")
