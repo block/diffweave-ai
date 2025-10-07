@@ -9,7 +9,9 @@ import rich.text
 import rich.padding
 
 
-def run_cmd(cmd: str, show_output: bool = True, silent: bool = False, **subprocess_kwargs) -> tuple[None | str, None | str]:
+def run_cmd(
+    cmd: str, show_output: bool = True, silent: bool = False, **subprocess_kwargs
+) -> tuple[None | str, None | str]:
     """
     Execute a shell command and handle its output.
 
@@ -44,9 +46,7 @@ def run_cmd(cmd: str, show_output: bool = True, silent: bool = False, **subproce
     error = process.stderr.strip()
 
     if not silent:
-        console.print(
-            rich.console.Group(rich.text.Text("$~~>", end=" "), rich.text.Text(f"{cmd}", style="bold green"))
-        )
+        console.print(rich.console.Group(rich.text.Text("$~~>", end=" "), rich.text.Text(f"{cmd}", style="bold green")))
 
     if process.returncode != 0:
         console.print(rich.padding.Padding(rich.syntax.Syntax(error, "bash"), (0, 0, 0, 2)))

@@ -12,7 +12,7 @@ import yaml
 CONFIG_BASEDIR = Path().home() / ".config"
 CONFIG_DIRECTORY = CONFIG_BASEDIR / "diffweave"
 CONFIG_FILE = CONFIG_DIRECTORY / "config.yaml"
-LEGACY_CONFIG = CONFIG_BASEDIR / 'llmit' / 'config.yaml'
+LEGACY_CONFIG = CONFIG_BASEDIR / "llmit" / "config.yaml"
 # Check if the legacy config file exists and copy it to the new location if needed
 if (not CONFIG_FILE.exists()) and LEGACY_CONFIG.exists():
     CONFIG_DIRECTORY.mkdir(parents=True, exist_ok=True)
@@ -81,7 +81,7 @@ class LLM:
             api_key=self.model_config["token"],
         )
         self.model_name = model_name
-        self.system_prompt = (Path(__file__).parent / "prompt.txt").read_text()
+        self.system_prompt = (Path(__file__).parent / "prompt.md").read_text()
 
     def iterate_on_commit_message(self, repo_status_prompt: str, context: str) -> str:
         console = rich.console.Console()
@@ -140,6 +140,12 @@ class LLM:
                 *[{"role": "user", "content": p} for p in prompt],
             ],
         )
-        message = response.choices[0].message.content
+        message = response.choices[0].message.content.strip()
+
+        if message.startswith("```\n"):
+            message = "\n".join(message.split("\n")[1:])
+
+        if message.endswith("\n```"):
+            message = "\n".join(message.split("\n")[:-1])
 
         return message
