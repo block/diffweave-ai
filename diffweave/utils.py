@@ -10,7 +10,7 @@ import rich.padding
 
 
 def run_cmd(
-    cmd: str, show_output: bool = True, silent: bool = False, **subprocess_kwargs
+    cmd: str, show_output: bool = True, silent: bool = False, **subprocess_kwargs,
 ) -> tuple[None | str, None | str]:
     """
     Execute a shell command and handle its output.
