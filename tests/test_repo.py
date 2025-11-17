@@ -58,7 +58,7 @@ def test_getting_all_files(new_repo: git.Repo):
 
 
 def test_generating_diffs_with_no_commits(new_repo: git.Repo):
-    new_repo.index.add(["README.md", 'main.py', 'test/__init__.py'])
+    new_repo.index.add(["README.md", "main.py", "test/__init__.py"])
     assert diffweave.repo.generate_diffs_with_context(new_repo)
 
 

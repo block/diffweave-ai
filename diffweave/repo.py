@@ -56,7 +56,6 @@ def generate_diffs_with_context(current_repo: git.Repo) -> str:
     return diff_overview
 
 
-
 def generate_diffs_with_valid_prior_commit(project_root: pathlib.Path, diffs: git.DiffIndex[git.diff.Diff]) -> str:
     console = rich.console.Console()
 
@@ -106,6 +105,7 @@ def generate_diffs_with_valid_prior_commit(project_root: pathlib.Path, diffs: gi
     diff_overview = "\n".join(diff_items)
 
     return diff_overview
+
 
 def generate_diffs_with_fresh_repo(project_root: pathlib.Path) -> str:
     stdout, stderr = utils.run_cmd("git diff --name-only --cached", show_output=False)
