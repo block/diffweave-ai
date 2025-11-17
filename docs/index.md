@@ -29,27 +29,26 @@ of python and all required dependencies!
 
 ### Usage
 
-#### Configuring the completion endpoint
+#### Configuring a model endpoint
 
 ```bash
-uvx diffweave-ai add-custom-model \
+uvx diffweave-ai add-model \
     --model "name-of-your-model" \
     --endpoint "https://endpoint-url" \
-    --token $TOKEN
+    --token "$TOKEN"
 ```
 
-This will prompt you for the API token for the model. Do NOT clutter your shell history with
-this token!
+This stores the model configuration in your local diffweave config file so it can be reused across runs. Do NOT clutter your shell history with the raw token—set it as an environment variable and reference it as shown above.
 
 ##### Example: Databricks Endpoint Configuration
 
 Get a token from Databricks and set it as the environment variable `DATABRICKS_TOKEN`:
 
 ```bash
-uvx diffweave-ai add-custom-model \
+uvx diffweave-ai add-model \
     --model "claude-3-7-sonnet" \
     --endpoint "https://block-lakehouse-production.cloud.databricks.com/serving-endpoints" \
-    --token $DATABRICKS_TOKEN
+    --token "$DATABRICKS_TOKEN"
 ```
 
 #### Configuring the default model to use
@@ -57,7 +56,7 @@ uvx diffweave-ai add-custom-model \
 Finally, in order to ensure that `diffweave` uses the model you just configured, you need to set it as the default model:
 
 ```bash
-uvx diffweave-ai set-default-llm-model claude-3-7-sonnet
+uvx diffweave-ai set-default "claude-3-7-sonnet"
 ```
 
 #### Using diffweave
@@ -65,11 +64,38 @@ uvx diffweave-ai set-default-llm-model claude-3-7-sonnet
 Basic usage - examine the current repo, stage files for commit, and generate a commit message:
 
 ```bash
-uvx diffweave-ai commit
+uvx diffweave-ai
 ```
 
-If you want to specify the model to run you can add the `--model` flag:
+If you want to specify the model to run you can add the `--model` / `-m` flag:
 
 ```bash
-uvx diffweave-ai commit --model "claude-3-7-sonnet"
+uvx diffweave-ai -m "claude-3-7-sonnet"
 ```
+
+If you prefer a simpler, more natural-language commit style rather than Conventional Commits, pass `--simple`:
+
+```bash
+uvx diffweave-ai --simple
+```
+
+You can also run in dry-run mode (generate and print a commit message without committing):
+
+```bash
+uvx diffweave-ai --dry-run
+```
+
+Or in a non-interactive mode, which will generate a message and attempt to commit and push without additional prompts:
+
+```bash
+uvx diffweave-ai --non-interactive
+```
+
+During a normal interactive `uvx diffweave-ai` run the CLI will:
+
+- Show `git status` for your current repository.
+- Offer to stage changes using git.
+- Generate a commit message using your configured model and internal prompt.
+- Let you review/refine the message.
+- Attempt `git commit -m "<message>"`.
+- Optionally run `git push` and, if the push output includes a URL, offer to open it in your browser to create a PR.
