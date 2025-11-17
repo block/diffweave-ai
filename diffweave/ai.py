@@ -65,11 +65,14 @@ def set_default_model(model_name: str, config_file: Path = None):
 
 
 class LLM:
-    def __init__(self, model_name: str, config_file: Path = None, simple: bool = False):
+    def __init__(self, model_name: str, config_file: Path = None, simple: bool = False, verbose: bool= False):
         self.simple = simple
+        self.verbose = verbose
         self.console = rich.console.Console()
+
         if config_file is None:
             config_file = CONFIG_FILE
+
         if not config_file.exists():
             raise FileNotFoundError("Config not set! Please do so before use.")
 
@@ -94,8 +97,6 @@ class LLM:
             self.system_prompt = (Path(__file__).parent / "prompt_simple.md").read_text()
 
     def iterate_on_commit_message(self, repo_status_prompt: str, context: str, return_first: bool = False) -> str:
-        console = rich.console.Console()
-
         message_attempts = []
         feedback = []
         user_prompt = [repo_status_prompt, f"\n\nAdditional context provided by the user:\n{context}\n"]
@@ -109,22 +110,26 @@ class LLM:
                         f"Previously REJECTED commit message attempts:\nAttempt: {a}\nUser Feedback: {f}\n---\n"
                     )
 
-            with console.status("Generating commit message...") as status:
+            if self.verbose:
+                for portion in user_prompt:
+                    self.console.print(portion)
+
+            with self.console.status("Generating commit message...") as status:
                 msg = loop.run_until_complete(self.query_model(user_prompt))
                 status.update("Done!")
             message_attempts.append(msg)
-            console.print(rich.panel.Panel(msg, title="Generated commit message"))
+            self.console.print(rich.panel.Panel(msg, title="Generated commit message"))
 
             if return_first:
                 return msg
 
-            console.print(
+            self.console.print(
                 rich.text.Text(
                     "Does this message look fine? <enter> to continue, otherwise provide feedback to improve the message",
                     style="yellow",
                 )
             )
-            we_good = console.input("> ").strip()
+            we_good = self.console.input("> ").strip()
             feedback.append(we_good)
             if we_good == "":
                 break

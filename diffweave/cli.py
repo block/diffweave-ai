@@ -21,10 +21,10 @@ app = cyclopts.App()
 
 @app.default
 def commit(
-    model: Annotated[str | None, Parameter(help="Internal Databricks model to use")] = None,
+    model: Annotated[str | None, Parameter(alias='-m', help="Internal Databricks model to use")] = None,
     simple: Annotated[
         bool,
-        Parameter(help="Use simpler commit structure for messages (not conventional commits)"),
+        Parameter(alias='-s', help="Use simpler commit structure for messages (not conventional commits)"),
     ] = False,
     dry_run: Annotated[
         bool,
@@ -36,6 +36,7 @@ def commit(
             help="Run in non-interactive mode. Similar to dry run except we then use that first commit message that comes back."
         ),
     ] = False,
+    verbose: Annotated[bool, Parameter(alias='-v', help="Show verbose output")] = False,
     config: Annotated[Path | None, Parameter(help="Path to config file")] = None,
 ):
     """
@@ -47,18 +48,22 @@ def commit(
     regenerate the message if needed.
 
     Args:
-        context: Additional context to include in the prompt to the LLM
         model: The specific LLM model to use for generating the commit message
+        simple: Use simpler commit structure for messages (not conventional commits)
+        dry_run: Dry run mode, just output a commit message based on current repo status
+        non_interactive: Use non-interactive mode
+        verbose: Show verbose output
+        config: Path to config file
     """
     console = rich.console.Console()
 
     skip_interaction = dry_run or non_interactive
 
-    llm = ai.LLM(model, simple=simple, config_file=config)
+    llm = ai.LLM(model, simple=simple, verbose=verbose, config_file=config)
 
     current_repo = repo.get_repo()
 
-    run_cmd("git status")
+    repo_status, _ = run_cmd("git status")
 
     if not skip_interaction:
         repo.add_files(current_repo)
@@ -69,7 +74,7 @@ def commit(
         console.print(rich.text.Text("No staged changes to commit, quitting!"), style="bold")
         sys.exit()
 
-    repo_status_prompt = diffs
+    repo_status_prompt = f"{repo_status}\n\n{diffs}"
     if skip_interaction:
         context = ""
     else:
