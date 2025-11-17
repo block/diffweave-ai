@@ -40,10 +40,6 @@ diffweave-ai = "diffweave:app"
 [tool.uv]
 resolution = "highest"
 
-[[tool.uv.index]]
-url = "https://pypi.block-artifacts.com/block-pypi/simple"
-default = true
-
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
