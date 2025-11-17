@@ -19,7 +19,7 @@ if (not CONFIG_FILE.exists()) and LEGACY_CONFIG.exists():
     CONFIG_FILE.write_text(LEGACY_CONFIG.read_text())
 
 
-def configure_custom_model(model_name: str, endpoint: str, token: str, config_file: Path = CONFIG_FILE):
+def configure_custom_model(model_name: str, endpoint: str, token: str, config_file: Path = None):
     """
     Configure a custom LLM model with the specified endpoint and token.
 
@@ -28,6 +28,8 @@ def configure_custom_model(model_name: str, endpoint: str, token: str, config_fi
         endpoint: The API endpoint URL for the model
         token: The authentication token for accessing the model API
     """
+    if config_file is None:
+        config_file = CONFIG_FILE
     config_file.parent.mkdir(parents=True, exist_ok=True)
     config_file.touch(exist_ok=True)
 
@@ -44,7 +46,10 @@ def configure_custom_model(model_name: str, endpoint: str, token: str, config_fi
     config_file.write_text(yaml.safe_dump(existing_config))
 
 
-def set_default_model(model_name: str, config_file: Path = CONFIG_FILE):
+def set_default_model(model_name: str, config_file: Path = None):
+    if config_file is None:
+        config_file = CONFIG_FILE
+
     console = rich.console.Console()
 
     config_file.parent.mkdir(parents=True, exist_ok=True)
@@ -60,8 +65,14 @@ def set_default_model(model_name: str, config_file: Path = CONFIG_FILE):
 
 
 class LLM:
-    def __init__(self, model_name: str, config_file: Path = CONFIG_FILE):
+    def __init__(self, model_name: str, config_file: Path = None, simple: bool = False, verbose: bool= False):
+        self.simple = simple
+        self.verbose = verbose
         self.console = rich.console.Console()
+
+        if config_file is None:
+            config_file = CONFIG_FILE
+
         if not config_file.exists():
             raise FileNotFoundError("Config not set! Please do so before use.")
 
@@ -82,13 +93,15 @@ class LLM:
         )
         self.model_name = model_name
         self.system_prompt = (Path(__file__).parent / "prompt.md").read_text()
+        if self.simple:
+            self.system_prompt = (Path(__file__).parent / "prompt_simple.md").read_text()
 
-    def iterate_on_commit_message(self, repo_status_prompt: str, context: str) -> str:
-        console = rich.console.Console()
-
+    def iterate_on_commit_message(self, repo_status_prompt: str, context: str, return_first: bool = False) -> str:
         message_attempts = []
         feedback = []
         user_prompt = [repo_status_prompt, f"\n\nAdditional context provided by the user:\n{context}\n"]
+
+        loop = asyncio.new_event_loop()
 
         while True:
             if message_attempts and feedback:
@@ -97,19 +110,26 @@ class LLM:
                         f"Previously REJECTED commit message attempts:\nAttempt: {a}\nUser Feedback: {f}\n---\n"
                     )
 
-            with console.status("Generating commit message...") as status:
-                loop = asyncio.new_event_loop()
+            if self.verbose:
+                for portion in user_prompt:
+                    self.console.print(portion)
+
+            with self.console.status("Generating commit message...") as status:
                 msg = loop.run_until_complete(self.query_model(user_prompt))
                 status.update("Done!")
             message_attempts.append(msg)
-            console.print(rich.panel.Panel(msg, title="Generated commit message"))
-            console.print(
+            self.console.print(rich.panel.Panel(msg, title="Generated commit message"))
+
+            if return_first:
+                return msg
+
+            self.console.print(
                 rich.text.Text(
                     "Does this message look fine? <enter> to continue, otherwise provide feedback to improve the message",
                     style="yellow",
                 )
             )
-            we_good = console.input("> ").strip()
+            we_good = self.console.input("> ").strip()
             feedback.append(we_good)
             if we_good == "":
                 break

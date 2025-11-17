@@ -1,5 +1,5 @@
 import os
-import pathlib
+from pathlib import Path
 import shutil
 import string
 
@@ -28,7 +28,7 @@ def test_adding_files(new_repo: git.Repo):
 
 
 def test_adding_files_with_one_removed(new_repo: git.Repo):
-    root_dir = pathlib.Path(new_repo.working_dir)
+    root_dir = Path(new_repo.working_dir)
     all_files = diffweave.repo.get_untracked_and_modified_files(new_repo)
     new_repo.index.add([str(f.relative_to(root_dir)) for f in all_files])
     new_repo.index.commit("Initial commit")
@@ -39,31 +39,36 @@ def test_adding_files_with_one_removed(new_repo: git.Repo):
 
 
 def test_finding_repo_root(new_repo: git.Repo, monkeypatch):
-    root_dir = pathlib.Path(new_repo.working_dir)
-    assert pathlib.Path(diffweave.repo.get_repo().working_dir) == root_dir
+    root_dir = Path(new_repo.working_dir)
+    assert root_dir.exists()
+
+    assert Path(diffweave.repo.get_repo().working_dir) == root_dir
 
     monkeypatch.chdir(root_dir / "test")
-    assert pathlib.Path(diffweave.repo.get_repo().working_dir) == root_dir
+    assert Path(os.getcwd()) == (root_dir / "test")
+    assert Path(diffweave.repo.get_repo().working_dir) == root_dir
 
     monkeypatch.chdir(root_dir / "test" / "submodule1")
-    assert pathlib.Path(diffweave.repo.get_repo().working_dir) == root_dir
+    assert Path(diffweave.repo.get_repo().working_dir) == root_dir
+
+    monkeypatch.undo()
 
 
 def test_getting_all_files(new_repo: git.Repo):
     assert len(diffweave.repo.get_untracked_and_modified_files(new_repo)) == 5
     new_repo.index.add(["README.md"])
     assert len(diffweave.repo.get_untracked_and_modified_files(new_repo)) == 4
-    pathlib.Path("README.md").write_text("AKJHSDGFKJHSDFLKJHSDFLKJH")
+    Path("README.md").write_text("AKJHSDGFKJHSDFLKJHSDFLKJH")
     assert len(diffweave.repo.get_untracked_and_modified_files(new_repo)) == 5
 
 
 def test_generating_diffs_with_no_commits(new_repo: git.Repo):
-    new_repo.index.add(["README.md", 'main.py', 'test/__init__.py'])
+    new_repo.index.add(["README.md", "main.py", "test/__init__.py"])
     assert diffweave.repo.generate_diffs_with_context(new_repo)
 
 
 def test_generating_diffs(new_repo: git.Repo):
-    root_dir = pathlib.Path(new_repo.working_dir)
+    root_dir = Path(new_repo.working_dir)
     new_repo.index.add(["README.md"])
 
     diff_summary = diffweave.repo.generate_diffs_with_context(new_repo)
@@ -80,7 +85,7 @@ def test_generating_diffs(new_repo: git.Repo):
 
 
 def test_diffs_with_deleted_file(new_repo: git.Repo):
-    root_dir = pathlib.Path(new_repo.working_dir)
+    root_dir = Path(new_repo.working_dir)
     all_files = diffweave.repo.get_untracked_and_modified_files(new_repo)
     new_repo.index.add([str(f.relative_to(root_dir)) for f in all_files])
     new_repo.index.commit("Initial commit")
@@ -105,7 +110,7 @@ def test_deleted_files(new_repo: git.Repo):
 
 
 def test_large_diffs(new_repo: git.Repo):
-    root_dir = pathlib.Path(new_repo.working_dir)
+    root_dir = Path(new_repo.working_dir)
     new_repo.index.add(["README.md"])
     new_repo.index.commit("Initial commit")
     all_files = diffweave.repo.get_untracked_and_modified_files(new_repo)

@@ -14,7 +14,7 @@ test target='tests/':
     uv run pytest --cov=diffweave -cov-branch {{ target }}
 
 commit:
-    uv run diffweave-ai commit
+    uv run diffweave-ai
 
 docs:
     uv run mkdocs build

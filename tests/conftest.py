@@ -1,3 +1,4 @@
+import datetime
 import os
 import pathlib
 import random
@@ -5,8 +6,16 @@ import string
 import shutil
 import uuid
 
+import yaml
 import pytest
 import git
+
+
+@pytest.fixture(autouse=True)
+def patch_openai(monkeypatch, mocker):
+    mock_openai = mocker.MagicMock()
+    monkeypatch.setattr("openai.OpenAI", mock_openai)
+    yield
 
 
 @pytest.fixture(scope="function")
@@ -34,5 +43,28 @@ def new_repo():
 def config_file():
     filename = uuid.uuid4().hex
     file_path = pathlib.Path(f"config_{filename}.yaml")
+    yield file_path
+    if file_path.exists():
+        file_path.unlink()
+
+
+@pytest.fixture(scope="function")
+def populated_config():
+    filename = uuid.uuid4().hex
+    file_path = pathlib.Path(f"config_{filename}.yaml")
+    config_contents = yaml.safe_dump(
+        {
+            "<<DEFAULT>>": "gpt-5.1",
+            "gpt-5.1": {
+                "endpoint": "https://api.example.com",
+                "token": "0xdeadbeef",
+            },
+            "gpt-4o": {
+                "endpoint": "https://api.example.com",
+                "token": "0xdeadbeef",
+            },
+        }
+    )
+    file_path.write_text(config_contents)
     yield file_path
     file_path.unlink()
