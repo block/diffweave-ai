@@ -39,7 +39,7 @@ def get_repo() -> git.Repo:
         raise SystemExit("No git repository found.")
 
 
-def generate_diffs_with_context(current_repo: git.Repo):
+def generate_diffs_with_context(current_repo: git.Repo) -> str:
     console = rich.console.Console()
 
     console.print("Generating diffs for staged files...", style="bold")
@@ -49,10 +49,16 @@ def generate_diffs_with_context(current_repo: git.Repo):
     diffs: git.diff.DiffIndex[git.diff.Diff]
     try:
         diffs = current_repo.head.commit.diff(git.IndexFile.Index, create_patch=True)
+        diff_overview = generate_diffs_with_valid_prior_commit(project_root, diffs)
     except ValueError:
-        # if there aren't any commits yet we need to handle this differently
-        # fixme
-        raise NotImplementedError
+        diff_overview = generate_diffs_with_fresh_repo(project_root)
+
+    return diff_overview
+
+
+
+def generate_diffs_with_valid_prior_commit(project_root: pathlib.Path, diffs: git.DiffIndex[git.diff.Diff]) -> str:
+    console = rich.console.Console()
 
     diff_items = []
     for diff_item in diffs:
@@ -99,6 +105,23 @@ def generate_diffs_with_context(current_repo: git.Repo):
 
     diff_overview = "\n".join(diff_items)
 
+    return diff_overview
+
+def generate_diffs_with_fresh_repo(project_root: pathlib.Path) -> str:
+    stdout, stderr = utils.run_cmd("git diff --name-only --cached", show_output=False)
+    diff_items = []
+    for staged_file_raw in stdout.splitlines():
+        staged_file = project_root / staged_file_raw
+        staged_file_contents = staged_file.read_text()
+        diff_items.append(
+            "============\n"
+            f"Newly added File: ./{staged_file.relative_to(project_root)}\n"
+            "----- Contents -----\n"
+            f"{staged_file_contents}\n\n"
+            "============\n"
+        )
+
+    diff_overview = "\n".join(diff_items)
     return diff_overview
 
 

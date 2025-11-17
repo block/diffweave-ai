@@ -57,13 +57,16 @@ def test_getting_all_files(new_repo: git.Repo):
     assert len(diffweave.repo.get_untracked_and_modified_files(new_repo)) == 5
 
 
+def test_generating_diffs_with_no_commits(new_repo: git.Repo):
+    new_repo.index.add(["README.md", 'main.py', 'test/__init__.py'])
+    assert diffweave.repo.generate_diffs_with_context(new_repo)
+
+
 def test_generating_diffs(new_repo: git.Repo):
     root_dir = pathlib.Path(new_repo.working_dir)
     new_repo.index.add(["README.md"])
 
-    # fixme
-    with pytest.raises(NotImplementedError):
-        diff_summary = diffweave.repo.generate_diffs_with_context(new_repo)
+    diff_summary = diffweave.repo.generate_diffs_with_context(new_repo)
 
     new_repo.index.commit("Initial commit")
 
