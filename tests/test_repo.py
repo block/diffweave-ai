@@ -122,3 +122,33 @@ def test_large_diffs(new_repo: git.Repo):
     new_repo.index.add(["large_file.txt"])
     diffs = diffweave.repo.generate_diffs_with_context(new_repo)
     assert "TOO LARGE TO SHOW" in diffs
+
+
+def test_get_repo_url(new_repo: git.Repo):
+    url = diffweave.repo.get_repo_url(new_repo)
+    assert url is not None
+
+
+def test_github_remote_url_regex():
+    """
+    https://stackoverflow.com/questions/31801271/what-are-the-supported-git-url-formats
+    """
+    for case in """
+    ssh://user@host.xz:port/path/to/repo.git/
+    ssh://user@host.xz/path/to/repo.git/
+    ssh://host.xz:port/path/to/repo.git/
+    ssh://host.xz/path/to/repo.git/
+    ssh://user@host.xz/path/to/repo.git/
+    ssh://host.xz/path/to/repo.git/
+    ssh://user@host.xz/~user/path/to/repo.git/
+    ssh://host.xz/~user/path/to/repo.git/
+    ssh://user@host.xz/~/path/to/repo.git
+    ssh://host.xz/~/path/to/repo.git
+    git://host.xz/path/to/repo.git/
+    git://host.xz/~user/path/to/repo.git/
+    http://host.xz/path/to/repo.git/
+    https://host.xz/path/to/repo.git/
+    """.strip().splitlines():
+        case = case.strip()
+        match = diffweave.repo.GITHUB_REMOTE_PATTERN.match(case)
+        assert match is not None

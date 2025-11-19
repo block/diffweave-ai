@@ -1,5 +1,6 @@
 import sys  # noqa
 import pathlib
+import re
 
 import git
 import rich
@@ -16,6 +17,10 @@ from . import utils
 # this means that we'll need to set this to ~20k per "item"
 # where item means here both file_contents and the diff result which are checked separately
 MAX_DIFF_ITEM_SIZE = 40_000
+GITHUB_REMOTE_PATTERN = re.compile(
+    r"^(?:\w+://)?(?:\w+@)?([\w\.]+)(:\d*)?(.+?)(?:\.git)?/?$",
+    flags=re.IGNORECASE,
+)
 
 
 def get_repo() -> git.Repo:
@@ -37,6 +42,21 @@ def get_repo() -> git.Repo:
         return repo
     except git.exc.InvalidGitRepositoryError:
         raise SystemExit("No git repository found.")
+
+
+def get_repo_url(repo: git.Repo) -> str | None:
+    """
+    Get the current git repository URL. Note, this assumes github is used!
+    """
+
+    remote = repo.remotes[0]
+    match = GITHUB_REMOTE_PATTERN.match(remote.url)
+    if match:
+        host = match.group(1)
+        path = match.group(3)
+        return f"https://{host}/{path}"
+    else:
+        return None
 
 
 def generate_diffs_with_context(current_repo: git.Repo) -> str:
@@ -74,7 +94,7 @@ def generate_diffs_with_valid_prior_commit(project_root: pathlib.Path, diffs: gi
         if skip_file:
             continue
 
-        console.print(rich.padding.Padding(rich.text.Text(f"Staged file: {diff_file}", style="dim"), (0, 0, 0, 2)))
+        console.print(rich.padding.Padding(rich.text.Text(f"Analyzing file: {diff_file}", style="dim"), (0, 0, 0, 2)))
         try:
             if file_was_removed:
                 file_contents = "<FILE REMOVED>"
@@ -123,6 +143,22 @@ def generate_diffs_with_fresh_repo(project_root: pathlib.Path) -> str:
 
     diff_overview = "\n".join(diff_items)
     return diff_overview
+
+def generate_diffs_for_pull_request(current_repo: git.Repo, branch: str) -> tuple[str, str]:
+    latest_commit = current_repo.head.commit.tree
+
+    commit_summary, _ = utils.run_cmd(f"git log --right-only --cherry-pick --format='raw' {branch}...HEAD")
+
+    other_branch = current_repo.commit(branch)
+
+    diff_index = other_branch.diff(latest_commit, create_patch=True)
+
+    project_root = pathlib.Path(current_repo.working_dir)
+
+    diff_overview = generate_diffs_with_valid_prior_commit(project_root, diff_index)
+
+    return commit_summary, diff_overview
+
 
 
 def get_untracked_and_modified_files(current_repo: git.Repo) -> list[pathlib.Path]:

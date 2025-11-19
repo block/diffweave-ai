@@ -35,6 +35,7 @@ def new_repo():
         pathlib.Path("test/submodule2").mkdir(exist_ok=True, parents=True)
         pathlib.Path("test/submodule2/__init__.py").touch()
         repo = git.Repo.init()
+        repo.create_remote("origin", "git@github.com:TheDataleek/fake_repo.git")
         yield repo
     shutil.rmtree(dir)
 

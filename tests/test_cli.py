@@ -33,12 +33,12 @@ def test_setting_custom_model(capsys, config_file: Path):
 
 def test_setting_default_model(populated_config: Path):
     with pytest.raises(SystemExit):
-        app("set-default")
+        app("set-model")
 
     data = yaml.safe_load(populated_config.read_text())
     assert data["<<DEFAULT>>"] == "gpt-5.1"
 
-    app(f"set-default gpt-4o --config {populated_config.absolute()}", result_action="return_value")
+    app(f"set-model gpt-4o --config {populated_config.absolute()}", result_action="return_value")
 
     data = yaml.safe_load(populated_config.read_text())
     assert data["<<DEFAULT>>"] == "gpt-4o"
