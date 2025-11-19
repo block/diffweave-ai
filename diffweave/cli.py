@@ -39,6 +39,7 @@ def commit(
         ),
     ] = False,
     verbose: Annotated[bool, Parameter(alias="-v", help="Show verbose output")] = False,
+    open_browser: Annotated[bool, Parameter(alias="-w", help="Open repository in browser window")] = False,
     config: Annotated[Path | None, Parameter(help="Path to config file")] = None,
 ):
     """
@@ -126,15 +127,9 @@ def commit(
         if should_push in ["", "y", "yes"]:
             push_result, error = run_cmd("git push")
 
-            if "http" in push_result + error:
-                open_pr = (
-                    console.input(r"Open Pull Request (PR)? <enter>/y for yes, anything else for no:\n> ")
-                    .strip()
-                    .lower()
-                )
-                if open_pr in ["", "y", "yes"]:
-                    if pr_url := re.match(r"\s+(https?://.+?$)", push_result + error, re.IGNORECASE):
-                        webbrowser.open(pr_url.group(1))
+            if open_browser and ("http" in push_result + error):
+                url = repo.get_repo_url(current_repo)
+                webbrowser.open(url)
 
     except (KeyboardInterrupt, EOFError):
         console.print(rich.text.Text("Cancelled..."), style="bold red")
@@ -143,8 +138,8 @@ def commit(
 @app.command
 def add_model(
     model: Annotated[str, Parameter(alias="-m", help="Model name to use")],
-    endpoint: Annotated[str, Parameter(alias="-e", help="Endpoint to use")],
     token: Annotated[str, Parameter(alias="-t", help="API token for authentication")],
+    endpoint: Annotated[str, Parameter(alias="-e", help="Endpoint to use")] = "https://api.openai.com/v1/responses",
     config: Annotated[Path | None, Parameter(alias="-c", help="Path to config file")] = None,
 ):
     """Register or update a custom LLM model configuration.
@@ -153,10 +148,10 @@ def add_model(
     ----------
     model : str
         Model name to use.
-    endpoint : str
-        Endpoint to use.
     token : str
         API token for authentication.
+    endpoint : str
+        Endpoint to use. Defaults to https://api.openai.com/v1/responses
     config : pathlib.Path | None
         Path to config file.
     """

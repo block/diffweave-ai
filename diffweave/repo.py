@@ -1,5 +1,6 @@
 import sys  # noqa
 import pathlib
+import re
 
 import git
 import rich
@@ -16,6 +17,10 @@ from . import utils
 # this means that we'll need to set this to ~20k per "item"
 # where item means here both file_contents and the diff result which are checked separately
 MAX_DIFF_ITEM_SIZE = 40_000
+GITHUB_REMOTE_PATTERN = re.compile(
+    r"^(?:\w+://)?(?:\w+@)?([\w\.]+)(:\d*)?(.+?)(?:\.git)?/?$",
+    flags=re.IGNORECASE,
+)
 
 
 def get_repo() -> git.Repo:
@@ -37,6 +42,21 @@ def get_repo() -> git.Repo:
         return repo
     except git.exc.InvalidGitRepositoryError:
         raise SystemExit("No git repository found.")
+
+
+def get_repo_url(repo: git.Repo) -> str | None:
+    """
+    Get the current git repository URL. Note, this assumes github is used!
+    """
+
+    remote = repo.remotes[0]
+    match = GITHUB_REMOTE_PATTERN.match(remote.url)
+    if match:
+        host = match.group(1)
+        path = match.group(3)
+        return f"https://{host}/{path}"
+    else:
+        return None
 
 
 def generate_diffs_with_context(current_repo: git.Repo) -> str:
