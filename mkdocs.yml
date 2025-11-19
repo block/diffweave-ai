@@ -3,6 +3,7 @@ repo_url: https://github.com/block/diffweave-ai
 site_url: https://block.github.io/diffweave-ai/
 nav:
   - Home: index.md
+  - Getting Started: installation.md
 theme:
   name: material
   favicon: ./images/favicon.ico
