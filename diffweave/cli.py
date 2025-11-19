@@ -138,7 +138,7 @@ def commit(
 
 @app.command
 def pr(
-    branch: Annotated[str, Parameter(help="Branch name to pull and compare against")],
+    branch: Annotated[str, Parameter(help="Branch name to pull and compare against")] = 'main',
     model: Annotated[str | None, Parameter(alias="-m", help="Name of the LLM Model to use")] = None,
     verbose: Annotated[bool, Parameter(alias="-v", help="Show verbose output")] = False,
     config: Annotated[Path | None, Parameter("-c", help="Path to config file")] = None,
@@ -164,9 +164,9 @@ def pr(
     repo_status_prompt = f"{commit_summary}\n\n{diffs}"
 
     try:
-        llm.iterate_on_commit_message(repo_status_prompt, context)
+        llm.iterate_on_commit_message(repo_status_prompt, context, return_first=True, no_panel=True)
     except (KeyboardInterrupt, EOFError):
-        console.print(rich.text.Text("Cancelled..."), style="bold red")
+        console.print(rich.text.Text("Quitting..."), style="bold red")
 
 
 @app.command

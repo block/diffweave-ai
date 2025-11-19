@@ -107,7 +107,8 @@ class LLM:
             prompt = 'prompt'
         self.system_prompt = (Path(__file__).parent / 'prompts' / f"{prompt}.md").read_text()
 
-    def iterate_on_commit_message(self, repo_status_prompt: str, context: str, return_first: bool = False) -> str:
+    def iterate_on_commit_message(self, repo_status_prompt: str, context: str, return_first: bool = False,
+                                  no_panel: bool = False) -> str:
         message_attempts = []
         feedback = []
         user_prompt = [repo_status_prompt, f"\n\nAdditional context provided by the user:\n{context}\n"]
@@ -125,11 +126,15 @@ class LLM:
                 for portion in user_prompt:
                     self.console.print(portion)
 
-            with self.console.status("Generating commit message...") as status:
+            with self.console.status("Generating message...") as status:
                 msg = loop.run_until_complete(self.query_model(user_prompt))
                 status.update("Done!")
             message_attempts.append(msg)
-            self.console.print(rich.panel.Panel(msg, title="Generated commit message"))
+
+            if no_panel:
+                self.console.print(msg)
+            else:
+                self.console.print(rich.panel.Panel(msg, title="Generated commit message"))
 
             if return_first:
                 return msg
