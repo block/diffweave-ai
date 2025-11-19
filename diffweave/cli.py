@@ -79,7 +79,7 @@ def commit(
 
     skip_interaction = dry_run or non_interactive
 
-    llm = ai.LLM(model, simple=simple, verbose=verbose, config_file=config)
+    llm = ai.LLM(model, verbose=verbose, config_file=config, prompt="simple" if simple else "prompt")
 
     current_repo = repo.get_repo()
 
@@ -132,6 +132,39 @@ def commit(
             url = repo.get_repo_url(current_repo)
             webbrowser.open(url)
 
+    except (KeyboardInterrupt, EOFError):
+        console.print(rich.text.Text("Cancelled..."), style="bold red")
+
+
+@app.command
+def pr(
+    branch: Annotated[str, Parameter(help="Branch name to pull and compare against")],
+    model: Annotated[str | None, Parameter(alias="-m", help="Name of the LLM Model to use")] = None,
+    verbose: Annotated[bool, Parameter(alias="-v", help="Show verbose output")] = False,
+    config: Annotated[Path | None, Parameter("-c", help="Path to config file")] = None,
+):
+    """
+    Generate a Pull Request
+    """
+    console = rich.console.Console()
+    llm = ai.LLM(model, verbose=verbose, config_file=config, prompt="pull_request")
+
+    current_repo = repo.get_repo()
+
+    commit_summary, diffs = repo.generate_diffs_for_pull_request(current_repo, branch)
+
+    console.print(
+        rich.text.Text(
+            r"Do you have any additional context/information for this pull request? Leave blank for none.",
+            style="yellow",
+        )
+    )
+    context = console.input(r"> ").strip().lower()
+
+    repo_status_prompt = f"{commit_summary}\n\n{diffs}"
+
+    try:
+        llm.iterate_on_commit_message(repo_status_prompt, context)
     except (KeyboardInterrupt, EOFError):
         console.print(rich.text.Text("Cancelled..."), style="bold red")
 

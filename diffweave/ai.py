@@ -71,8 +71,13 @@ def list_models(config_file: Path = None):
 
 
 class LLM:
-    def __init__(self, model_name: str, config_file: Path = None, simple: bool = False, verbose: bool = False):
-        self.simple = simple
+    def __init__(
+            self,
+            model_name: str,
+            config_file: Path = None,
+            verbose: bool = False,
+            prompt: str = None,
+    ):
         self.verbose = verbose
         self.console = rich.console.Console()
 
@@ -97,9 +102,10 @@ class LLM:
             api_key=self.model_config["token"],
         )
         self.model_name = model_name
-        self.system_prompt = (Path(__file__).parent / "prompt.md").read_text()
-        if self.simple:
-            self.system_prompt = (Path(__file__).parent / "prompt_simple.md").read_text()
+
+        if prompt is None:
+            prompt = 'prompt'
+        self.system_prompt = (Path(__file__).parent / 'prompts' / f"{prompt}.md").read_text()
 
     def iterate_on_commit_message(self, repo_status_prompt: str, context: str, return_first: bool = False) -> str:
         message_attempts = []
