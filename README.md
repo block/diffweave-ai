@@ -8,6 +8,8 @@ DiffWeave is a tool that automatically generates meaningful Git commit messages 
 
 ## Installation & Quick Start
 
+You can run DiffWeave via `uvx diffweave-ai` or from a local checkout using `uv run diffweave-ai` while developing this repo.
+
 DiffWeave is installed as an isolated tool using `uv`:
 
 ```bash
@@ -33,7 +35,7 @@ uvx diffweave-ai add-model \
 Then set the default model to use:
 
 ```bash
-uvx diffweave-ai set-default "name-of-your-model"
+uvx diffweave-ai set-model "name-of-your-model"
 ```
 
 You can still override the model per invocation with the `--model` / `-m` flag.
