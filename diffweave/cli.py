@@ -51,8 +51,9 @@ def commit(
     - Optionally stages files for you (interactive by default).
     - Generates a commit message using your configured model.
     - Lets you review and refine the message.
-    - Attempts ``git commit`` (and optionally ``git push`` and PR open
-      if a URL is printed).
+    - Attempts ``git commit``
+    - Attempts ``git push``
+    - Attempts to open the repository in the browser window if requested
 
     Depending on flags, the command can run purely as a dry run, perform a full commit and optional push, or operate
     in a non-interactive mode suitable for scripts.
