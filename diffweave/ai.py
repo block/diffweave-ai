@@ -28,10 +28,7 @@ def configure_custom_model(model_name: str, endpoint: str, token: str, config_fi
         endpoint: The API endpoint URL for the model
         token: The authentication token for accessing the model API
     """
-    if config_file is None:
-        config_file = CONFIG_FILE
-    config_file.parent.mkdir(parents=True, exist_ok=True)
-    config_file.touch(exist_ok=True)
+    config_file = _initialize_config(config_file)
 
     existing_config = yaml.safe_load(config_file.read_text()) or dict()
 
@@ -47,13 +44,9 @@ def configure_custom_model(model_name: str, endpoint: str, token: str, config_fi
 
 
 def set_default_model(model_name: str, config_file: Path = None):
-    if config_file is None:
-        config_file = CONFIG_FILE
-
     console = rich.console.Console()
 
-    config_file.parent.mkdir(parents=True, exist_ok=True)
-    config_file.touch(exist_ok=True)
+    config_file = _initialize_config(config_file)
 
     existing_config = yaml.safe_load(config_file.read_text()) or dict()
     if model_name not in existing_config:
@@ -64,19 +57,31 @@ def set_default_model(model_name: str, config_file: Path = None):
     config_file.write_text(yaml.safe_dump(existing_config))
 
 
+def list_models(config_file: Path = None):
+    config_file = _initialize_config(config_file)
+    config = yaml.safe_load(config_file.read_text())
+    return {
+        "<<DEFAULT>>": config.get("<<DEFAULT>>"),
+        **{
+            k: {k2: v2 if k2 != "token" else "<TOKEN REDACTED>" for k2, v2 in v.items()}
+            for k, v in config.items()
+            if k != "<<DEFAULT>>"
+        },
+    }
+
+
 class LLM:
-    def __init__(self, model_name: str, config_file: Path = None, simple: bool = False, verbose: bool= False):
+    def __init__(self, model_name: str, config_file: Path = None, simple: bool = False, verbose: bool = False):
         self.simple = simple
         self.verbose = verbose
         self.console = rich.console.Console()
 
-        if config_file is None:
-            config_file = CONFIG_FILE
-
-        if not config_file.exists():
-            raise FileNotFoundError("Config not set! Please do so before use.")
+        config_file = _initialize_config(config_file)
 
         existing_config = yaml.safe_load(config_file.read_text())
+
+        if not len(existing_config):
+            raise EnvironmentError("Config not set! Please do so before use.")
 
         if model_name is None:
             model_name = existing_config["<<DEFAULT>>"]
@@ -169,3 +174,13 @@ class LLM:
             message = "\n".join(message.split("\n")[:-1])
 
         return message
+
+
+def _initialize_config(config_file: Path | None):
+    if config_file is None:
+        config_file = CONFIG_FILE
+
+    config_file.parent.mkdir(parents=True, exist_ok=True)
+    config_file.touch(exist_ok=True)
+
+    return config_file
