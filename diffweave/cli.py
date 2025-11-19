@@ -125,11 +125,11 @@ def commit(
         console.print(rich.text.Text(r"Push? <enter>/y for yes, anything else for no", style="yellow"))
         should_push = console.input(r"> ").strip().lower()
         if should_push in ["", "y", "yes"]:
-            push_result, error = run_cmd("git push")
+            run_cmd("git push")
 
-            if open_browser and ("http" in push_result + error):
-                url = repo.get_repo_url(current_repo)
-                webbrowser.open(url)
+        if open_browser:
+            url = repo.get_repo_url(current_repo)
+            webbrowser.open(url)
 
     except (KeyboardInterrupt, EOFError):
         console.print(rich.text.Text("Cancelled..."), style="bold red")
