@@ -40,7 +40,7 @@ def commit(
     ] = False,
     verbose: Annotated[bool, Parameter(alias="-v", help="Show verbose output")] = False,
     open_browser: Annotated[bool, Parameter(alias="-w", help="Open repository in browser window")] = False,
-    config: Annotated[Path | None, Parameter(help="Path to config file")] = ai.CONFIG_FILE,
+    config: Annotated[Path | None, Parameter(alias="-c", help="Path to config file")] = ai.CONFIG_FILE,
 ):
     """
     Generate a commit message for the current state of the repository.
