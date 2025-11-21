@@ -18,7 +18,7 @@ from . import utils
 # where item means here both file_contents and the diff result which are checked separately
 MAX_DIFF_ITEM_SIZE = 40_000
 GITHUB_REMOTE_PATTERN = re.compile(
-    r"^(?:\w+://)?(?:\w+@)?([\w\.]+)(:\d*)?(.+?)(?:\.git)?/?$",
+    r"^(?:\w+://)?(?:[\w\d-]+@)?([\w\.]+)(:\d*)?(.+?)(?:\.git)?/?$",
     flags=re.IGNORECASE,
 )
 

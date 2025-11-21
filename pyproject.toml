@@ -4,12 +4,13 @@ authors = [
     {name="Zoë Farmer", email="zfarmer@squareup.com"},
     {name="Chase Hudson", email="chasehudson@squareup.com"},
 ]
-version = "1.2.0"
+version = "1.2.1"
 description = "Assists with git workflows using LLMs."
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
     "beaupy>=3.10.1",
+    "copykitten>=2.0.0",
     "cyclopts>=3.24.0",
     "gitpython>=3.1.44",
     "openai>=1.82.0",

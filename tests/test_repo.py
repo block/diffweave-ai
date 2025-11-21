@@ -148,7 +148,16 @@ def test_github_remote_url_regex():
     git://host.xz/~user/path/to/repo.git/
     http://host.xz/path/to/repo.git/
     https://host.xz/path/to/repo.git/
+    org-1234456@github.com:some-user/some-repo.git
     """.strip().splitlines():
         case = case.strip()
         match = diffweave.repo.GITHUB_REMOTE_PATTERN.match(case)
+        print(case)
         assert match is not None
+        print(match)
+        host = match.group(1)
+        print(host)
+        assert len(host.split('.')) == 2
+        path = match.group(3)
+        print(path)
+        print(f"https://{host}/{path}")
