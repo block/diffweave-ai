@@ -7,6 +7,10 @@ import pytest
 from diffweave import app
 
 
+def test_initial_install():
+    app("-c non-existent-config.yaml")
+
+
 def test_setting_custom_model(capsys, config_file: Path):
     with pytest.raises(SystemExit):
         app("add-model")

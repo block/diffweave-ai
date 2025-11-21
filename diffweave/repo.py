@@ -144,6 +144,7 @@ def generate_diffs_with_fresh_repo(project_root: pathlib.Path) -> str:
     diff_overview = "\n".join(diff_items)
     return diff_overview
 
+
 def generate_diffs_for_pull_request(current_repo: git.Repo, branch: str) -> tuple[str, str]:
     latest_commit = current_repo.head.commit.tree
 
@@ -158,7 +159,6 @@ def generate_diffs_for_pull_request(current_repo: git.Repo, branch: str) -> tupl
     diff_overview = generate_diffs_with_valid_prior_commit(project_root, diff_index)
 
     return commit_summary, diff_overview
-
 
 
 def get_untracked_and_modified_files(current_repo: git.Repo) -> list[pathlib.Path]:
