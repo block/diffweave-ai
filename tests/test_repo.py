@@ -157,7 +157,7 @@ def test_github_remote_url_regex():
         print(match)
         host = match.group(1)
         print(host)
-        assert len(host.split('.')) == 2
+        assert len(host.split(".")) == 2
         path = match.group(3)
         print(path)
         print(f"https://{host}/{path}")
