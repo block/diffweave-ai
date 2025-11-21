@@ -4,7 +4,7 @@ authors = [
     {name="Zoë Farmer", email="zfarmer@squareup.com"},
     {name="Chase Hudson", email="chasehudson@squareup.com"},
 ]
-version = "1.2.0"
+version = "1.2.1"
 description = "Assists with git workflows using LLMs."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -40,10 +40,6 @@ diffweave-ai = "diffweave:app"
 
 [tool.uv]
 resolution = "highest"
-
-[[tool.uv.index]]
-url = "https://pypi.block-artifacts.com/block-pypi/simple"
-default = true
 
 [build-system]
 requires = ["hatchling"]
