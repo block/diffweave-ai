@@ -11,6 +11,7 @@ import rich.text
 import rich.panel
 import rich.status
 import rich.padding
+import copykitten
 
 from . import run_cmd, repo, ai
 
@@ -148,7 +149,9 @@ def pr(
     repo_status_prompt = f"{commit_summary}\n\n{diffs}"
 
     try:
-        llm.iterate_on_commit_message(repo_status_prompt, context, return_first=True, no_panel=True)
+        msg = llm.iterate_on_commit_message(repo_status_prompt, context, return_first=True, no_panel=True)
+        copykitten.copy(msg)
+        console.print("Contents copied to system clipboard!", style="bold green")
     except (KeyboardInterrupt, EOFError):
         console.print(rich.text.Text("Quitting..."), style="bold red")
 

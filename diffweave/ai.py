@@ -184,13 +184,6 @@ class LLM:
         if message.endswith("\n```"):
             message = "\n".join(message.split("\n")[:-1])
 
-        wrapped_message = []
-        for chunk in message.split("\n"):
-            wrapped_chunk = textwrap.wrap(chunk, width=80)
-            wrapped_message.append('\n'.join(wrapped_chunk))
-
-        message = "\n".join(wrapped_message)
-
         return message
 
 

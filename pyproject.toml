@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
     "beaupy>=3.10.1",
+    "copykitten>=2.0.0",
     "cyclopts>=3.24.0",
     "gitpython>=3.1.44",
     "openai>=1.82.0",
@@ -39,6 +40,10 @@ diffweave-ai = "diffweave:app"
 
 [tool.uv]
 resolution = "highest"
+
+[[tool.uv.index]]
+url = "https://pypi.block-artifacts.com/block-pypi/simple"
+default = true
 
 [build-system]
 requires = ["hatchling"]
