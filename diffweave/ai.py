@@ -91,7 +91,7 @@ class LLM:
                 rich.text.Text("$> uvx diffweave-ai add-model", style="bold blue"),
                 rich.text.Text("\nto specify LLM configuration before continuing."),
             )
-            sys.exit(1)
+            raise EnvironmentError
 
         if model_name is None:
             model_name = existing_config["<<DEFAULT>>"]

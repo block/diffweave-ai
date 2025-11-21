@@ -64,7 +64,11 @@ def commit(
 
     skip_interaction = dry_run or non_interactive
 
-    llm = ai.LLM(model, verbose=verbose, config_file=config, prompt="simple" if simple else "prompt")
+    try:
+        llm = ai.LLM(model, verbose=verbose, config_file=config, prompt="simple" if simple else "prompt")
+    except EnvironmentError:
+        app('-h')
+        sys.exit(1)
 
     current_repo = repo.get_repo()
 
@@ -132,7 +136,12 @@ def pr(
     Generate a Pull Request
     """
     console = rich.console.Console()
-    llm = ai.LLM(model, verbose=verbose, config_file=config, prompt="pull_request")
+
+    try:
+        llm = ai.LLM(model, verbose=verbose, config_file=config, prompt="pull_request")
+    except EnvironmentError:
+        app('-h')
+        sys.exit(1)
 
     current_repo = repo.get_repo()
 
