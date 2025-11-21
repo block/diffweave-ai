@@ -1,4 +1,4 @@
-import textwrap
+import sys
 import asyncio
 from pathlib import Path
 
@@ -72,11 +72,11 @@ def list_models(config_file: Path = None):
 
 class LLM:
     def __init__(
-            self,
-            model_name: str,
-            config_file: Path = None,
-            verbose: bool = False,
-            prompt: str = None,
+        self,
+        model_name: str,
+        config_file: Path = None,
+        verbose: bool = False,
+        prompt: str = None,
     ):
         self.verbose = verbose
         self.console = rich.console.Console()
@@ -85,8 +85,13 @@ class LLM:
 
         existing_config = yaml.safe_load(config_file.read_text())
 
-        if not len(existing_config):
-            raise EnvironmentError("Config not set! Please do so before use.")
+        if existing_config is None:
+            self.console.print(
+                rich.text.Text("Configuration file not found! Run\n"),
+                rich.text.Text("$> uvx diffweave-ai add-model", style="bold blue"),
+                rich.text.Text("\nto specify LLM configuration before continuing."),
+            )
+            raise EnvironmentError
 
         if model_name is None:
             model_name = existing_config["<<DEFAULT>>"]
@@ -104,11 +109,12 @@ class LLM:
         self.model_name = model_name
 
         if prompt is None:
-            prompt = 'prompt'
-        self.system_prompt = (Path(__file__).parent / 'prompts' / f"{prompt}.md").read_text()
+            prompt = "prompt"
+        self.system_prompt = (Path(__file__).parent / "prompts" / f"{prompt}.md").read_text()
 
-    def iterate_on_commit_message(self, repo_status_prompt: str, context: str, return_first: bool = False,
-                                  no_panel: bool = False) -> str:
+    def iterate_on_commit_message(
+        self, repo_status_prompt: str, context: str, return_first: bool = False, no_panel: bool = False
+    ) -> str:
         message_attempts = []
         feedback = []
         user_prompt = [repo_status_prompt, f"\n\nAdditional context provided by the user:\n{context}\n"]

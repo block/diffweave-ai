@@ -7,6 +7,18 @@ import pytest
 from diffweave import app
 
 
+def test_initial_install(capsys, config_file: Path):
+    with pytest.raises(SystemExit):
+        app(f"-c {config_file.absolute()}", result_action="return_value")
+    stdout = capsys.readouterr().out
+    assert "uvx diffweave-ai add-model" in stdout
+
+    with pytest.raises(SystemExit):
+        app(f"pr -c {config_file.absolute()}", result_action="return_value")
+    stdout = capsys.readouterr().out
+    assert "uvx diffweave-ai add-model" in stdout
+
+
 def test_setting_custom_model(capsys, config_file: Path):
     with pytest.raises(SystemExit):
         app("add-model")

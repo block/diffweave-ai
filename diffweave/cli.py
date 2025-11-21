@@ -40,7 +40,7 @@ def commit(
     ] = False,
     verbose: Annotated[bool, Parameter(alias="-v", help="Show verbose output")] = False,
     open_browser: Annotated[bool, Parameter(alias="-w", help="Open repository in browser window")] = False,
-    config: Annotated[Path | None, Parameter(help="Path to config file")] = ai.CONFIG_FILE,
+    config: Annotated[Path | None, Parameter(alias="-c", help="Path to config file")] = ai.CONFIG_FILE,
 ):
     """
     Generate a commit message for the current state of the repository.
@@ -64,7 +64,11 @@ def commit(
 
     skip_interaction = dry_run or non_interactive
 
-    llm = ai.LLM(model, verbose=verbose, config_file=config, prompt="simple" if simple else "prompt")
+    try:
+        llm = ai.LLM(model, verbose=verbose, config_file=config, prompt="simple" if simple else "prompt")
+    except EnvironmentError:
+        app('-h')
+        sys.exit(1)
 
     current_repo = repo.get_repo()
 
@@ -123,7 +127,7 @@ def commit(
 
 @app.command
 def pr(
-    branch: Annotated[str, Parameter(help="Branch name to pull and compare against")] = 'main',
+    branch: Annotated[str, Parameter(help="Branch name to pull and compare against")] = "main",
     model: Annotated[str | None, Parameter(alias="-m", help="Name of the LLM Model to use")] = None,
     verbose: Annotated[bool, Parameter(alias="-v", help="Show verbose output")] = False,
     config: Annotated[Path | None, Parameter("-c", help="Path to config file")] = ai.CONFIG_FILE,
@@ -132,7 +136,12 @@ def pr(
     Generate a Pull Request
     """
     console = rich.console.Console()
-    llm = ai.LLM(model, verbose=verbose, config_file=config, prompt="pull_request")
+
+    try:
+        llm = ai.LLM(model, verbose=verbose, config_file=config, prompt="pull_request")
+    except EnvironmentError:
+        app('-h')
+        sys.exit(1)
 
     current_repo = repo.get_repo()
 
@@ -163,8 +172,7 @@ def add_model(
     endpoint: Annotated[str, Parameter(alias="-e", help="Endpoint to use")] = "https://api.openai.com/v1/responses",
     config: Annotated[Path | None, Parameter(alias="-c", help="Path to config file")] = ai.CONFIG_FILE,
 ):
-    """Register or update a custom LLM model configuration.
-    """
+    """Register or update a custom LLM model configuration."""
     console = rich.console.Console()
     ai.configure_custom_model(model, endpoint, token, config_file=config)
     console.print(f"Model [{model}] successfully added!", style="bold green")
@@ -175,8 +183,7 @@ def set_model(
     model: Annotated[str, Parameter(help="Model name to use")],
     config: Annotated[Path | None, Parameter(help="Path to config file")] = ai.CONFIG_FILE,
 ):
-    """Set the default LLM model used by the CLI.
-    """
+    """Set the default LLM model used by the CLI."""
     console = rich.console.Console()
 
     ai.set_default_model(model, config)
@@ -188,8 +195,7 @@ def set_model(
 def list_models(
     config: Annotated[Path | None, Parameter(help="Path to config file")] = ai.CONFIG_FILE,
 ):
-    """List all configured LLM models.
-    """
+    """List all configured LLM models."""
     console = rich.console.Console()
 
     models = ai.list_models(config)
