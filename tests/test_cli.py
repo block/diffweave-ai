@@ -48,3 +48,36 @@ def test_commit(capsys, new_repo: git.Repo, valid_config: Path):
     new_repo.index.add(["README.md", "main.py", "test/__init__.py"])
     app("--dry-run", result_action="return_value")
     assert "Generated commit message" in capsys.readouterr().out
+
+
+def test_commit_non_interactive(capsys, new_repo: git.Repo, valid_config: Path, mocker):
+    new_repo.index.add(["README.md", "main.py", "test/__init__.py"])
+    mock_run_cmd = mocker.patch("diffweave.cli.run_cmd", return_value=("output", ""))
+    app("--non-interactive", result_action="return_value")
+    calls = [str(c) for c in mock_run_cmd.call_args_list]
+    assert any("git commit" in c for c in calls)
+    assert any("git push" in c for c in calls)
+
+
+def test_pr_command(capsys, new_repo: git.Repo, valid_config: Path, mocker):
+    new_repo.index.add(["README.md"])
+    new_repo.index.commit("Initial commit")
+    new_repo.index.add(["main.py"])
+    new_repo.index.commit("Second commit")
+    mocker.patch("rich.console.Console.input", new=lambda self, *args, **kwargs: "")
+    mocker.patch("copykitten.copy")
+    app(["pr", "--branch", "HEAD~1"], result_action="return_value")
+    assert "Generated PR description" in capsys.readouterr().out
+
+
+def test_set_databricks_browser_model(capsys, config_file: Path, monkeypatch):
+    monkeypatch.setattr("diffweave.ai.CONFIG_FILE", config_file)
+    app(
+        ["set-databricks-browser-model", "databricks-llama", "-a", "my-account"],
+        result_action="return_value",
+    )
+    assert "configured" in capsys.readouterr().out
+    data = yaml.safe_load(config_file.read_text())
+    assert data["type"] == "databricks"
+    assert data["model_name"] == "databricks-llama"
+    assert data["account"] == "my-account"
