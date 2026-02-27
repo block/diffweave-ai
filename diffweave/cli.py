@@ -51,7 +51,7 @@ def commit(
     Use `--dry-run` to preview a message without committing. Use `--non-interactive`
     for scripted or automated workflows (skips all prompts and pushes automatically).
 
-    Run `diffweave-ai add-model` to configure an LLM provider before first use.
+    Run `diffweave-ai set-token-model` or `diffweave-ai set-databricks-browser-model` to configure your LLM before first use.
     """
     console = rich.console.Console()
 
@@ -165,17 +165,21 @@ def pr(
 
 @app.command
 def set_token_model(
-    model_name: str,
+    model_name: Annotated[str, Parameter(alias="-m", help="Model identifier to pass to the API (e.g. gpt-4o, claude-3-5-sonnet-20241022)")],
     token: Annotated[str, Parameter(alias="-t", help="API token for the endpoint")],
     endpoint: Annotated[str, Parameter(alias="-e", help="Base URL of the OpenAI-compatible API endpoint")] = "https://api.openai.com/v1/responses",
 ):
-    """Register or update a model in the config. Use the model identifier with -m when running other commands."""
+    """Configure a token-authenticated OpenAI-compatible model as the active LLM. Overwrites any existing configuration."""
     console = rich.console.Console()
     ai.configure_token_model(model_name, endpoint, token)
     console.print(f"Model successfully set!", style="bold green")
 
 @app.command
-def set_databricks_browser_model(model_name: str, account: str):
+def set_databricks_browser_model(
+    model_name: Annotated[str, Parameter(alias="-m", help="Model identifier as it appears in Databricks serving endpoints (e.g. databricks-meta-llama-3-3-70b-instruct)")],
+    account: Annotated[str, Parameter(alias="-a", help="Databricks workspace account name (e.g. my-org)")],
+):
+    """Configure a Databricks-hosted model as the active LLM using browser-based authentication. Overwrites any existing configuration."""
     console = rich.console.Console()
     ai.configure_databricks_browser_model(model_name, account)
     console.print(f"Model successfully set!", style="bold green")
