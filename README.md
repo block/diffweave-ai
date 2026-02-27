@@ -1,6 +1,6 @@
 # DiffWeave AI
 
-DiffWeave is a tool that automatically generates meaningful Git commit messages using large language models (LLMs). It analyzes your staged changes and creates descriptive commit messages, saving you time and ensuring consistent documentation.
+DiffWeave is a tool that automatically generates meaningful Git commit messages and pull request descriptions using large language models (LLMs). It analyzes your staged changes and creates descriptive commit messages, saving you time and ensuring consistent documentation.
 
 [Documentation available here](https://block.github.io/diffweave-ai/)
 
@@ -23,26 +23,30 @@ uvx diffweave-ai
 
 ### Configure a model
 
-Before generating commit messages, configure at least one model endpoint:
+Before generating commit messages, configure your model. DiffWeave supports two authentication types:
+
+**Token-based (OpenAI-compatible endpoints):**
 
 ```bash
-uvx diffweave-ai add-model \
-  --model "name-of-your-model" \
-  --endpoint "https://endpoint-url" \
-  --token "$TOKEN"
+uvx diffweave-ai set-token-model "your-model-name" \
+  --token "$YOUR_API_TOKEN" \
+  --endpoint "https://your-endpoint-url"
 ```
 
-Then set the default model to use:
+The `--endpoint` flag defaults to `https://api.openai.com/v1/responses` if omitted.
+
+**Databricks (browser-based authentication):**
 
 ```bash
-uvx diffweave-ai set-model "name-of-your-model"
+uvx diffweave-ai set-databricks-browser-model "your-model-name" \
+  --account "your-databricks-account"
 ```
 
-You can still override the model per invocation with the `--model` / `-m` flag.
+This opens a browser window for authentication and caches the resulting token automatically.
 
 ### Generate a commit message
 
-Once you have a model configured and some changes staged in your current Git repository you can run:
+Once you have a model configured and some changes staged in your current Git repository, run:
 
 ```bash
 uvx diffweave-ai
@@ -51,40 +55,49 @@ uvx diffweave-ai
 This will:
 
 - Show the current `git status`.
-- Optionally stage files for you (interactive by default).
+- Prompt you to stage files interactively.
 - Generate a commit message using your configured model.
-- Let you review/refine the message.
-- Attempt `git commit` (and optionally `git push` and PR open if a URL is printed).
+- Let you review and refine the message before committing.
+- Run `git commit`, then prompt whether to `git push`.
+- Optionally open the repository in a browser (requires `--open-browser`).
 
-To specify a model for a single run:
-
-```bash
-uvx diffweave-ai -m "your-model-name"
-```
-
-If you prefer a simpler, more natural-language commit style rather than Conventional Commits, pass `--simple`:
+If you prefer a simpler, natural-language style instead of Conventional Commits, pass `--simple`:
 
 ```bash
 uvx diffweave-ai --simple
 ```
 
-You can also run in dry-run mode (generate and print a commit message without committing):
+To preview a message without committing:
 
 ```bash
 uvx diffweave-ai --dry-run
 ```
 
-Or in a non-interactive mode, which will generate a message and attempt to commit and push without asking follow-up questions:
+For scripted or automated workflows (skips all prompts, commits, and pushes automatically):
 
 ```bash
 uvx diffweave-ai --non-interactive
 ```
 
+### Generate a pull request description
+
+To generate a PR title and body based on the diff between your branch and `main`:
+
+```bash
+uvx diffweave-ai pr
+```
+
+The result is copied to your clipboard automatically. Use `--branch` to diff against a branch other than `main`:
+
+```bash
+uvx diffweave-ai pr --branch my-base-branch
+```
+
 ## Features
 
 - AI-powered commit message generation based on staged diffs
+- Pull request description generation with automatic clipboard copy
 - Interactive or non-interactive workflows
-- Support for configuring custom LLM HTTP endpoints
-- Ability to set and override the default model
+- Token-based (OpenAI-compatible) and Databricks browser authentication
 - Optional simpler commit style via `--simple`
-- Optional push and PR-open flow when `git push` prints a URL
+- Optional push and browser-open flow after committing
