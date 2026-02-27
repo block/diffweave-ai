@@ -49,7 +49,7 @@ def run_cmd(
     error = process.stderr.strip()
 
     if not silent:
-        console.print(rich.console.Group(rich.text.Text("$~~>", end=" "), rich.text.Text(f"{cmd}", style="bold green")))
+        console.print(rich.console.Group(rich.text.Text("$>", end=" "), rich.text.Text(f"{cmd}", style="bold green")))
 
     if process.returncode != 0:
         console.print(rich.padding.Padding(rich.syntax.Syntax(error, "bash"), (0, 0, 0, 2)))

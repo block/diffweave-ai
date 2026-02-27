@@ -1,6 +1,9 @@
 import sys
 import asyncio
 from pathlib import Path
+import json
+import datetime
+import subprocess
 
 import openai
 import rich
@@ -8,18 +11,14 @@ import rich.console
 import rich.text
 import rich.panel
 import yaml
+import dateutil.parser
 
 CONFIG_BASEDIR = Path().home() / ".config"
 CONFIG_DIRECTORY = CONFIG_BASEDIR / "diffweave"
 CONFIG_FILE = CONFIG_DIRECTORY / "config.yaml"
-LEGACY_CONFIG = CONFIG_BASEDIR / "llmit" / "config.yaml"
-# Check if the legacy config file exists and copy it to the new location if needed
-if (not CONFIG_FILE.exists()) and LEGACY_CONFIG.exists():
-    CONFIG_DIRECTORY.mkdir(parents=True, exist_ok=True)
-    CONFIG_FILE.write_text(LEGACY_CONFIG.read_text())
 
 
-def configure_custom_model(model_name: str, endpoint: str, token: str, config_file: Path = None):
+def configure_token_model(model_name: str, endpoint: str, token: str):
     """
     Configure a custom LLM model with the specified endpoint and token.
 
@@ -28,85 +27,73 @@ def configure_custom_model(model_name: str, endpoint: str, token: str, config_fi
         endpoint: The API endpoint URL for the model
         token: The authentication token for accessing the model API
     """
-    config_file = _initialize_config(config_file)
+    config_file = _initialize_config()
 
-    existing_config = yaml.safe_load(config_file.read_text()) or dict()
+    config_file.write_text(
+        yaml.safe_dump(
+            {
+                "type": "token",
+                "model_name": model_name,
+                "endpoint": endpoint,
+                "token": token,
+            }
+        )
+    )
 
-    existing_config[model_name] = {
-        "endpoint": endpoint,
-        "token": token,
-    }
+def configure_databricks_browser_model(model_name: str, account: str):
+    config_file = _initialize_config()
+    config_file.write_text(
+        yaml.safe_dump(
+            {
+                "type": "databricks",
+                "model_name": model_name,
+                "account": account,
+            }
+        )
+    )
 
-    if "<<DEFAULT>>" not in existing_config:
-        existing_config["<<DEFAULT>>"] = model_name
-
-    config_file.write_text(yaml.safe_dump(existing_config))
-
-
-def set_default_model(model_name: str, config_file: Path = None):
-    console = rich.console.Console()
-
-    config_file = _initialize_config(config_file)
-
-    existing_config = yaml.safe_load(config_file.read_text()) or dict()
-    if model_name not in existing_config:
-        console.print(rich.text.Text(f"Model '{model_name}' not found!!", style="bold red"))
-        raise ValueError(f"Model '{model_name}' not found!!")
-
-    existing_config["<<DEFAULT>>"] = model_name
-    config_file.write_text(yaml.safe_dump(existing_config))
-
-
-def list_models(config_file: Path = None):
-    config_file = _initialize_config(config_file)
-    config = yaml.safe_load(config_file.read_text())
-    return {
-        "<<DEFAULT>>": config.get("<<DEFAULT>>"),
-        **{
-            k: {k2: v2 if k2 != "token" else "<TOKEN REDACTED>" for k2, v2 in v.items()}
-            for k, v in config.items()
-            if k != "<<DEFAULT>>"
-        },
-    }
 
 
 class LLM:
     def __init__(
         self,
-        model_name: str,
-        config_file: Path = None,
         verbose: bool = False,
         prompt: str = None,
     ):
         self.verbose = verbose
         self.console = rich.console.Console()
 
-        config_file = _initialize_config(config_file)
+        config_file = _initialize_config()
+        model_config = yaml.safe_load(config_file.read_text())
 
-        existing_config = yaml.safe_load(config_file.read_text())
-
-        if existing_config is None:
-            self.console.print(
-                rich.text.Text("Configuration file not found! Run\n"),
-                rich.text.Text("$> uvx diffweave-ai add-model", style="bold blue"),
-                rich.text.Text("\nto specify LLM configuration before continuing."),
-            )
+        if model_config is None:
+            self.console.print(rich.panel.Panel(
+                "No model configured yet. Run one of:\n\n"
+                "  [bold]diffweave-ai set-token-model[/bold] [dim]<model> -t <token>[/dim]\n"
+                "  [bold]diffweave-ai set-databricks-browser-model[/bold] [dim]<model> <account>[/dim]",
+                title="[yellow]Setup required[/yellow]",
+                border_style="yellow",
+            ))
             raise EnvironmentError
 
-        if model_name is None:
-            model_name = existing_config["<<DEFAULT>>"]
+        self.model_name = model_config["model_name"]
+        match model_config:
+            case {"type": "token"}:
+                self.client = openai.OpenAI(
+                    base_url=model_config["endpoint"],
+                    api_key=model_config["token"],
+                )
+            case {"type": "databricks"}:
+                account = model_config["account"]
+                host = f"https://{account}.cloud.databricks.com"
+                if (token := load_databricks_token_from_cache(account)) is None:
+                    subprocess.run(f'databricks auth login --profile {account} --host {host}', shell=True)
+                    token = load_databricks_token_from_cache(account)
 
-        if (model_name is not None) and (model_name not in existing_config):
-            self.console.print(rich.text.Text(f"Model '{model_name}' not found!!", style="bold red"))
-            raise ValueError(f"Model '{model_name}' not found!!")
-
-        self.model_config = existing_config[model_name]
-
-        self.client = openai.OpenAI(
-            base_url=self.model_config["endpoint"],
-            api_key=self.model_config["token"],
-        )
-        self.model_name = model_name
+                self.client = openai.OpenAI(
+                    base_url="https://block-lakehouse-production.cloud.databricks.com/serving-endpoints",
+                    api_key=token
+                )
 
         if prompt is None:
             prompt = "prompt"
@@ -129,16 +116,20 @@ class LLM:
                     )
 
             if self.verbose:
+                self.console.rule("Prompt")
                 for portion in user_prompt:
                     self.console.print(portion)
+                self.console.rule()
 
-            with self.console.status("Generating message...") as status:
+            with self.console.status("Generating message..."):
                 msg = loop.run_until_complete(self.query_model(user_prompt))
-                status.update("Done!")
+            self.console.print("[dim]Done.[/dim]")
             message_attempts.append(msg)
 
             if no_panel:
+                self.console.rule("[bold]Generated PR description[/bold]")
                 self.console.print(msg)
+                self.console.rule()
             else:
                 self.console.print(rich.panel.Panel(msg, title="Generated commit message"))
 
@@ -193,11 +184,25 @@ class LLM:
         return message
 
 
-def _initialize_config(config_file: Path | None):
-    if config_file is None:
-        config_file = CONFIG_FILE
+def _initialize_config():
+    CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    CONFIG_FILE.touch(exist_ok=True)
 
-    config_file.parent.mkdir(parents=True, exist_ok=True)
-    config_file.touch(exist_ok=True)
+    return CONFIG_FILE
 
-    return config_file
+
+def load_databricks_token_from_cache(account: str) -> str | None:
+    homedir = Path().home()
+    databricks_config_dir = homedir / '.databricks'
+    token_cache = databricks_config_dir / 'token-cache.json'
+    try:
+        conf = json.loads(token_cache.read_text())
+        token_conf = conf['tokens'][account]
+        expires = dateutil.parser.parse(token_conf['expiry'])
+        tzinfo = datetime.datetime.now(datetime.timezone.utc).astimezone().tzinfo
+        now = datetime.datetime.now(tz=tzinfo)
+        is_token_expired = expires < now
+        if not is_token_expired:
+            return token_conf['access_token']
+    except Exception as e:
+        rich.console.Console().print(f"[yellow]Could not load cached Databricks token:[/yellow] {e}")

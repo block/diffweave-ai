@@ -50,22 +50,17 @@ def config_file():
 
 
 @pytest.fixture(scope="function")
-def populated_config():
-    filename = uuid.uuid4().hex
-    file_path = pathlib.Path(f"config_{filename}.yaml")
-    config_contents = yaml.safe_dump(
-        {
-            "<<DEFAULT>>": "gpt-5.1",
-            "gpt-5.1": {
+def valid_config(monkeypatch, tmp_path):
+    file_path = tmp_path / "config.yaml"
+    file_path.write_text(
+        yaml.safe_dump(
+            {
+                "type": "token",
+                "model_name": "gpt-4o",
                 "endpoint": "https://api.example.com",
                 "token": "0xdeadbeef",
-            },
-            "gpt-4o": {
-                "endpoint": "https://api.example.com",
-                "token": "0xdeadbeef",
-            },
-        }
+            }
+        )
     )
-    file_path.write_text(config_contents)
+    monkeypatch.setattr("diffweave.ai.CONFIG_FILE", file_path)
     yield file_path
-    file_path.unlink()

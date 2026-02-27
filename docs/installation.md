@@ -5,71 +5,70 @@
 Ensure you have the following dependencies installed:
 
 * [git](https://git-scm.com/downloads/linux)
-* [tree](https://linux.die.net/man/1/tree)
+* [tree](https://linux.die.net/man/1/tree) *(optional — used for pretty file-tree display when staging)*
 * [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
 ## Installation
 
-Once `uv` is all set up on your shell, you can install `diffweave` with the following command:
+Once `uv` is set up on your shell, install `diffweave-ai` with:
 
 ```bash
 uvx diffweave-ai
 ```
 
-This will install `diffweave` as a "tool", in an isolated virtual environment with its own version
-of python and all required dependencies!
-[Check out the docs here for more information on tools](https://docs.astral.sh/uv/guides/tools/)
+This installs `diffweave-ai` as a uv tool in an isolated virtual environment with its own Python and all required dependencies.
+[See the uv tools documentation for more information.](https://docs.astral.sh/uv/guides/tools/)
 
+# Configuration
 
-# Configuration 
+DiffWeave stores a single active model configuration at `~/.config/diffweave/config.yaml`. Running either setup command below will create or overwrite this file.
 
-## Configuring a model endpoint
+## Token-authenticated models (OpenAI-compatible)
 
-```bash
-uvx diffweave-ai add-model \
-    --model "name-of-your-model" \
-    --endpoint "https://endpoint-url" \
-    --token "$TOKEN"
-```
-
-This stores the model configuration in your local diffweave config file so it can be reused across runs. Do NOT clutter your shell history with the raw token—set it as an environment variable and reference it as shown above.
-
-### Example: Databricks Endpoint Configuration
-
-Get a token from Databricks and set it as the environment variable `DATABRICKS_TOKEN`:
+Use `set-token-model` for any OpenAI-compatible endpoint — including OpenAI itself, Azure OpenAI, Anthropic, or a self-hosted model:
 
 ```bash
-uvx diffweave-ai add-model \
-    --model "claude-3-7-sonnet" \
-    --endpoint "https://block-lakehouse-production.cloud.databricks.com/serving-endpoints" \
-    --token "$DATABRICKS_TOKEN"
+uvx diffweave-ai set-token-model "your-model-name" \
+    --token "$YOUR_API_TOKEN" \
+    --endpoint "https://your-endpoint-url"
 ```
 
-## Setting the default model
+The `--endpoint` flag defaults to `https://api.openai.com/v1/responses` if omitted.
 
-To make a particular model the default for `diffweave-ai`, run:
+Do **not** paste raw tokens directly into your shell history. Set the token as an environment variable and reference it as shown above.
+
+### Example: OpenAI
 
 ```bash
-uvx diffweave-ai set-model "claude-3-7-sonnet"
+uvx diffweave-ai set-token-model "gpt-4o" \
+    --token "$OPENAI_API_KEY"
 ```
 
-You can still override the model per invocation with the `--model` / `-m` flag.
-
-## Configuration file
-
-All model definitions and defaults are stored in a configuration file. By default, DiffWeave chooses a sensible location in your home directory, but you can override this with the `--config` / `-c` flag on any command that accepts it (for example: `add-model`, `set-model`, `list-models`, `pr`, or the default commit command).
-
-This is useful if you:
-
-- Maintain separate model configs for different projects or environments.
-- Want to keep a project-local configuration file checked into a repository.
-
-## Listing configured models
-
-To see what models are currently configured in your chosen config file, run:
+### Example: Custom / self-hosted endpoint
 
 ```bash
-uvx diffweave-ai list-models
+uvx diffweave-ai set-token-model "claude-3-5-sonnet-20241022" \
+    --token "$MY_API_TOKEN" \
+    --endpoint "https://my-llm-gateway.example.com/v1"
 ```
 
-You can pass `--config` if you want to point at a non-default config file.
+## Databricks-hosted models (browser authentication)
+
+Use `set-databricks-browser-model` to configure a model hosted on Databricks. Authentication is handled via browser login — no token management required:
+
+```bash
+uvx diffweave-ai set-databricks-browser-model "databricks-meta-llama-3-3-70b-instruct" \
+    --account "my-org"
+```
+
+On first use (and whenever the cached token expires), a browser window will open for you to authenticate. The resulting token is cached locally and reused for subsequent runs.
+
+## Verifying your configuration
+
+After configuring a model, run a quick dry-run to confirm everything is working:
+
+```bash
+uvx diffweave-ai --dry-run
+```
+
+The model name in use is shown at the top of every run.
