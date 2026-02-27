@@ -1,5 +1,4 @@
 import sys
-from pathlib import Path
 import shlex
 from typing_extensions import Annotated
 import webbrowser
@@ -20,52 +19,46 @@ app = cyclopts.App()
 
 @app.default
 def commit(
-    model: Annotated[str | None, Parameter(alias="-m", help="Name of the LLM Model to use")] = None,
     simple: Annotated[
         bool,
-        Parameter(alias="-s", help="Use simpler commit structure for messages (not conventional commits)"),
+        Parameter(alias="-s", help="Use natural-language style instead of Conventional Commits (feat:, fix:, etc.)"),
     ] = False,
     dry_run: Annotated[
         bool,
-        Parameter(help="Generate a commit message based on the current repo status, print to stdout, and quit."),
+        Parameter(help="Generate a commit message and print it, but do not commit or push."),
     ] = False,
     non_interactive: Annotated[
         bool,
         Parameter(
-            help=(
-                "Run in non-interactive mode. Similar to dry run except "
-                "we then use that first commit message that comes back."
-            )
+            help="Skip all prompts: use the first generated message and automatically push after committing.",
         ),
     ] = False,
-    verbose: Annotated[bool, Parameter(alias="-v", help="Show verbose output")] = False,
-    open_browser: Annotated[bool, Parameter(alias="-w", help="Open repository in browser window")] = False,
-    config: Annotated[Path | None, Parameter(alias="-c", help="Path to config file")] = ai.CONFIG_FILE,
+    verbose: Annotated[bool, Parameter(alias="-v", help="Print the prompt sent to the model before each generation attempt")] = False,
+    open_browser: Annotated[bool, Parameter(alias="-w", help="Open the repository URL in a browser after pushing")] = False,
 ):
     """
     Generate a commit message for the current state of the repository.
 
-    Default behavior (with no arguments) is an interactive flow that:
+    Default behavior (no flags) runs an interactive flow:
 
     - Shows the current `git status`.
-    - Optionally stages files for you (interactive by default).
+    - Prompts you to stage files.
     - Generates a commit message using your configured model.
-    - Lets you review and refine the message.
-    - Attempts `git commit`
-    - Attempts `git push`
-    - Attempts to open the repository in the browser window if requested
+    - Lets you review and refine the message before committing.
+    - Runs `git commit`, then prompts whether to `git push`.
+    - Optionally opens the repository in the browser (requires `--open-browser`).
 
-    Depending on flags, the command can run purely as a dry run, perform a full commit and optional push, or operate
-    in a non-interactive mode suitable for scripts.
+    Use `--dry-run` to preview a message without committing. Use `--non-interactive`
+    for scripted or automated workflows (skips all prompts and pushes automatically).
 
-    Note: Be sure to configure your LLM provider before use.
+    Run `diffweave-ai add-model` to configure an LLM provider before first use.
     """
     console = rich.console.Console()
 
     skip_interaction = dry_run or non_interactive
 
     try:
-        llm = ai.LLM(model, verbose=verbose, config_file=config, prompt="simple" if simple else "prompt")
+        llm = ai.LLM(verbose=verbose, prompt="simple" if simple else "prompt")
     except EnvironmentError:
         app('-h')
         sys.exit(1)
@@ -127,18 +120,23 @@ def commit(
 
 @app.command
 def pr(
-    branch: Annotated[str, Parameter(help="Branch name to pull and compare against")] = "main",
-    model: Annotated[str | None, Parameter(alias="-m", help="Name of the LLM Model to use")] = None,
-    verbose: Annotated[bool, Parameter(alias="-v", help="Show verbose output")] = False,
-    config: Annotated[Path | None, Parameter("-c", help="Path to config file")] = ai.CONFIG_FILE,
+    branch: Annotated[str, Parameter(help="Base branch to diff the current branch against")] = "main",
+    verbose: Annotated[bool, Parameter(alias="-v", help="Print the prompt sent to the model before each generation attempt")] = False,
 ):
     """
-    Generate a Pull Request
+    Generate a pull request title and description for the current branch.
+
+    Diffs the current branch against `--branch` (default: main), then uses your
+    configured model to produce a PR title and body. The result is copied to your
+    system clipboard automatically.
+
+    You will be prompted for optional context (e.g. reviewer notes, issue links)
+    before generation.
     """
     console = rich.console.Console()
 
     try:
-        llm = ai.LLM(model, verbose=verbose, config_file=config, prompt="pull_request")
+        llm = ai.LLM(verbose=verbose, prompt="pull_request")
     except EnvironmentError:
         app('-h')
         sys.exit(1)
@@ -166,42 +164,21 @@ def pr(
 
 
 @app.command
-def add_model(
-    model: Annotated[str, Parameter(alias="-m", help="Model name to use")],
-    token: Annotated[str, Parameter(alias="-t", help="API token for authentication")],
-    endpoint: Annotated[str, Parameter(alias="-e", help="Endpoint to use")] = "https://api.openai.com/v1/responses",
-    config: Annotated[Path | None, Parameter(alias="-c", help="Path to config file")] = ai.CONFIG_FILE,
+def set_token_model(
+    model_name: str,
+    token: Annotated[str, Parameter(alias="-t", help="API token for the endpoint")],
+    endpoint: Annotated[str, Parameter(alias="-e", help="Base URL of the OpenAI-compatible API endpoint")] = "https://api.openai.com/v1/responses",
 ):
-    """Register or update a custom LLM model configuration."""
+    """Register or update a model in the config. Use the model identifier with -m when running other commands."""
     console = rich.console.Console()
-    ai.configure_custom_model(model, endpoint, token, config_file=config)
-    console.print(f"Model [{model}] successfully added!", style="bold green")
-
+    ai.configure_token_model(model_name, endpoint, token)
+    console.print(f"Model successfully set!", style="bold green")
 
 @app.command
-def set_model(
-    model: Annotated[str, Parameter(help="Model name to use")],
-    config: Annotated[Path | None, Parameter(help="Path to config file")] = ai.CONFIG_FILE,
-):
-    """Set the default LLM model used by the CLI."""
+def set_databricks_browser_model(model_name: str, account: str):
     console = rich.console.Console()
-
-    ai.set_default_model(model, config)
-
-    console.print(f"Model [{model}] successfully set to default!", style="bold green")
-
-
-@app.command
-def list_models(
-    config: Annotated[Path | None, Parameter(help="Path to config file")] = ai.CONFIG_FILE,
-):
-    """List all configured LLM models."""
-    console = rich.console.Console()
-
-    models = ai.list_models(config)
-
-    console.print(models)
-
+    ai.configure_databricks_browser_model(model_name, account)
+    console.print(f"Model successfully set!", style="bold green")
 
 if __name__ == "__main__":
     app()

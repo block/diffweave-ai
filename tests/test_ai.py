@@ -11,7 +11,7 @@ import diffweave
 
 def test_configuring_new_model(config_file: Path):
     assert not config_file.exists()
-    diffweave.ai.configure_custom_model(
+    diffweave.ai.configure_token_model(
         "some_model",
         "https://api.example.com",
         "my_token",
@@ -24,7 +24,7 @@ def test_setting_default_model(config_file):
     with pytest.raises(ValueError):
         diffweave.ai.set_default_model("some_model", config_file=config_file)
 
-    diffweave.ai.configure_custom_model(
+    diffweave.ai.configure_token_model(
         "some_model",
         "https://api.example.com",
         "my_token",
