@@ -67,11 +67,13 @@ class LLM:
         model_config = yaml.safe_load(config_file.read_text())
 
         if model_config is None:
-            self.console.print(
-                rich.text.Text("Configuration file not found! Run\n"),
-                rich.text.Text("$> uvx diffweave-ai --help", style="bold blue"),  # todo, adjust this doc
-                rich.text.Text("\nto see setup instructions"),
-            )
+            self.console.print(rich.panel.Panel(
+                "No model configured yet. Run one of:\n\n"
+                "  [bold]diffweave-ai set-token-model[/bold] [dim]<model> -t <token>[/dim]\n"
+                "  [bold]diffweave-ai set-databricks-browser-model[/bold] [dim]<model> <account>[/dim]",
+                title="[yellow]Setup required[/yellow]",
+                border_style="yellow",
+            ))
             raise EnvironmentError
 
         self.model_name = model_config["model_name"]
@@ -114,16 +116,20 @@ class LLM:
                     )
 
             if self.verbose:
+                self.console.rule("Prompt")
                 for portion in user_prompt:
                     self.console.print(portion)
+                self.console.rule()
 
-            with self.console.status("Generating message...") as status:
+            with self.console.status("Generating message..."):
                 msg = loop.run_until_complete(self.query_model(user_prompt))
-                status.update("Done!")
+            self.console.print("[dim]Done.[/dim]")
             message_attempts.append(msg)
 
             if no_panel:
+                self.console.rule("[bold]Generated PR description[/bold]")
                 self.console.print(msg)
+                self.console.rule()
             else:
                 self.console.print(rich.panel.Panel(msg, title="Generated commit message"))
 
@@ -199,4 +205,4 @@ def load_databricks_token_from_cache(account: str) -> str | None:
         if not is_token_expired:
             return token_conf['access_token']
     except Exception as e:
-        print(e)
+        rich.console.Console().print(f"[yellow]Could not load cached Databricks token:[/yellow] {e}")

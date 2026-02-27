@@ -63,6 +63,9 @@ def commit(
         app('-h')
         sys.exit(1)
 
+    console.print(f"[dim]Model: {llm.model_name}[/dim]")
+    console.rule("[bold]diffweave-ai[/bold]")
+
     current_repo = repo.get_repo()
 
     repo_status, _ = run_cmd("git status")
@@ -73,7 +76,7 @@ def commit(
     diffs = repo.generate_diffs_with_context(current_repo)
 
     if diffs == "":
-        console.print(rich.text.Text("No staged changes to commit, quitting!"), style="bold")
+        console.print(rich.text.Text("No staged changes to commit, quitting!"), style="bold yellow")
         sys.exit()
 
     repo_status_prompt = f"{repo_status}\n\n{diffs}"
@@ -82,11 +85,11 @@ def commit(
     else:
         console.print(
             rich.text.Text(
-                r"Do you have any additional context/information for this commit? Leave blank for none.",
+                "Do you have any additional context/information for this commit? Leave blank for none.",
                 style="yellow",
             )
         )
-        context = console.input(r"> ").strip().lower()
+        context = console.input("> ").strip().lower()
 
     try:
         msg = llm.iterate_on_commit_message(repo_status_prompt, context, return_first=skip_interaction)
@@ -97,7 +100,7 @@ def commit(
         try:
             run_cmd(f"git commit -m {shlex.quote(msg)}")
         except SystemError:
-            console.print("Uh oh, something happened while committing. Trying once more!")
+            console.print("[yellow]Commit failed — re-staging and retrying...[/yellow]")
             repo.add_files(current_repo)
             run_cmd(f"git commit -m {shlex.quote(msg)}")
 
@@ -105,8 +108,8 @@ def commit(
             run_cmd("git push")
             return
 
-        console.print(rich.text.Text(r"Push? <enter>/y for yes, anything else for no", style="yellow"))
-        should_push = console.input(r"> ").strip().lower()
+        console.print(rich.text.Text("Push? <enter>/y for yes, anything else for no", style="yellow"))
+        should_push = console.input("> ").strip().lower()
         if should_push in ["", "y", "yes"]:
             run_cmd("git push")
 
@@ -141,17 +144,20 @@ def pr(
         app('-h')
         sys.exit(1)
 
+    console.print(f"[dim]Model: {llm.model_name}[/dim]")
+    console.rule("[bold]diffweave-ai pr[/bold]")
+
     current_repo = repo.get_repo()
 
     commit_summary, diffs = repo.generate_diffs_for_pull_request(current_repo, branch)
 
     console.print(
         rich.text.Text(
-            r"Do you have any additional context/information for this pull request? Leave blank for none.",
+            "Do you have any additional context/information for this pull request? Leave blank for none.",
             style="yellow",
         )
     )
-    context = console.input(r"> ").strip().lower()
+    context = console.input("> ").strip().lower()
 
     repo_status_prompt = f"{commit_summary}\n\n{diffs}"
 
@@ -172,7 +178,7 @@ def set_token_model(
     """Configure a token-authenticated OpenAI-compatible model as the active LLM. Overwrites any existing configuration."""
     console = rich.console.Console()
     ai.configure_token_model(model_name, endpoint, token)
-    console.print(f"Model successfully set!", style="bold green")
+    console.print(f"Model [bold]{model_name}[/bold] configured.", style="green")
 
 @app.command
 def set_databricks_browser_model(
@@ -182,7 +188,7 @@ def set_databricks_browser_model(
     """Configure a Databricks-hosted model as the active LLM using browser-based authentication. Overwrites any existing configuration."""
     console = rich.console.Console()
     ai.configure_databricks_browser_model(model_name, account)
-    console.print(f"Model successfully set!", style="bold green")
+    console.print(f"Model [bold]{model_name}[/bold] configured.", style="green")
 
 if __name__ == "__main__":
     app()

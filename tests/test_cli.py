@@ -29,7 +29,7 @@ def test_setting_custom_model(capsys, config_file: Path, monkeypatch):
 
     arguments = "set-token-model gpt-5.1 -t 0xdeadbeef -e https://api.example.com"
     app(tokens=arguments, result_action="return_value")
-    assert "successfully set!" in capsys.readouterr().out
+    assert "configured" in capsys.readouterr().out
 
     assert config_file.exists()
     file_contents = config_file.read_text()
