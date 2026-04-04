@@ -33,7 +33,7 @@ uvx diffweave-ai set-token-model "your-model-name" \
   --endpoint "https://your-endpoint-url"
 ```
 
-The `--endpoint` flag defaults to `https://api.openai.com/v1/responses` if omitted.
+The `--endpoint` flag defaults to `https://api.openai.com/v1` if omitted.
 
 **Databricks (browser-based authentication):**
 

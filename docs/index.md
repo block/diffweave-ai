@@ -70,7 +70,7 @@ uvx diffweave-ai set-token-model MODEL_NAME --token TOKEN [--endpoint URL]
 |------|-------|---------|-------------|
 | `MODEL_NAME` | `-m` | *(required)* | Model identifier (e.g. `gpt-4o`, `claude-3-5-sonnet-20241022`) |
 | `--token` | `-t` | *(required)* | API token for the endpoint |
-| `--endpoint` | `-e` | `https://api.openai.com/v1/responses` | Base URL of the OpenAI-compatible API endpoint |
+| `--endpoint` | `-e` | `https://api.openai.com/v1` | Base URL of the OpenAI-compatible API endpoint |
 
 #### `set-databricks-browser-model` — Configure a Databricks model
 
