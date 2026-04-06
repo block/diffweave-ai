@@ -4,7 +4,7 @@ authors = [
     {name="Zoë Farmer", email="zfarmer@squareup.com"},
     {name="Chase Hudson", email="chasehudson@squareup.com"},
 ]
-version = "2.0.1"
+version = "2.0.2"
 description = "Assists with git workflows using LLMs."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -95,6 +95,9 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 # Like Black, automatically detect the appropriate line ending.
 line-ending = "auto"
+
+[tool.pytest.ini_options]
+markers = ["e2e: end-to-end tests that require a real API token"]
 
 [tool.mypy]
 python_version = "3.12"
