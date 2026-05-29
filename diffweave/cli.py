@@ -173,7 +173,7 @@ def pr(
 def set_token_model(
     model_name: Annotated[str, Parameter(alias="-m", help="Model identifier to pass to the API (e.g. gpt-4o, claude-3-5-sonnet-20241022)")],
     token: Annotated[str, Parameter(alias="-t", help="API token for the endpoint")],
-    endpoint: Annotated[str, Parameter(alias="-e", help="Base URL of the OpenAI-compatible API endpoint")] = "https://api.openai.com/v1/responses",
+    endpoint: Annotated[str, Parameter(alias="-e", help="Base URL of the OpenAI-compatible API endpoint")] = "https://api.openai.com/v1",
 ):
     """Configure a token-authenticated OpenAI-compatible model as the active LLM. Overwrites any existing configuration."""
     console = rich.console.Console()

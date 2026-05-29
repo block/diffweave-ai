@@ -33,7 +33,7 @@ uvx diffweave-ai set-token-model "your-model-name" \
     --endpoint "https://your-endpoint-url"
 ```
 
-The `--endpoint` flag defaults to `https://api.openai.com/v1/responses` if omitted.
+The `--endpoint` flag defaults to `https://api.openai.com/v1` if omitted.
 
 Do **not** paste raw tokens directly into your shell history. Set the token as an environment variable and reference it as shown above.
 

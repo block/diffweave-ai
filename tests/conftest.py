@@ -12,7 +12,10 @@ import git
 
 
 @pytest.fixture(autouse=True)
-def patch_openai(monkeypatch, mocker):
+def patch_openai(request, monkeypatch, mocker):
+    if request.node.get_closest_marker("e2e"):
+        yield
+        return
     mock_openai = mocker.MagicMock()
     monkeypatch.setattr("openai.OpenAI", mock_openai)
     yield
