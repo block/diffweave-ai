@@ -1,4 +1,4 @@
-# DiffWeave AI
+# DiffWeave
 
 DiffWeave is a tool that automatically generates meaningful Git commit messages and pull request descriptions using large language models (LLMs). It analyzes your staged changes and creates descriptive commit messages, saving you time and ensuring consistent documentation.
 
