@@ -2,7 +2,6 @@ import sys
 import asyncio
 from pathlib import Path
 import json
-import datetime
 import subprocess
 
 import openai
@@ -11,7 +10,6 @@ import rich.console
 import rich.text
 import rich.panel
 import yaml
-import dateutil.parser
 
 CONFIG_BASEDIR = Path().home() / ".config"
 CONFIG_DIRECTORY = CONFIG_BASEDIR / "diffweave"
@@ -86,9 +84,14 @@ class LLM:
             case {"type": "databricks"}:
                 account = model_config["account"]
                 host = f"https://{account}.cloud.databricks.com"
-                if (token := load_databricks_token_from_cache(account)) is None:
-                    subprocess.run(f'databricks auth login --profile {account} --host {host}', shell=True)
-                    token = load_databricks_token_from_cache(account)
+                if (token := load_databricks_token(account)) is None:
+                    subprocess.run(["databricks", "auth", "login", "--profile", account, "--host", host])
+                    token = load_databricks_token(account)
+                    if token is None:
+                        self.console.print(
+                            f"[red]Failed to acquire Databricks token for profile {account!r}.[/red]"
+                        )
+                        raise EnvironmentError
 
                 self.client = openai.OpenAI(
                     base_url="https://block-lakehouse-production.cloud.databricks.com/serving-endpoints",
@@ -191,18 +194,21 @@ def _initialize_config():
     return CONFIG_FILE
 
 
-def load_databricks_token_from_cache(account: str) -> str | None:
-    homedir = Path().home()
-    databricks_config_dir = homedir / '.databricks'
-    token_cache = databricks_config_dir / 'token-cache.json'
+def load_databricks_token(account: str) -> str | None:
+    """Fetch a fresh Databricks access token via the CLI.
+
+    Databricks CLI v1.0.0 moved token storage to the OS keychain, so reading
+    ``~/.databricks/token-cache.json`` directly no longer works. ``databricks
+    auth token`` handles refresh transparently and returns the live token.
+    """
+    result = subprocess.run(
+        ["databricks", "auth", "token", "--profile", account, "-o", "json"],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return None
     try:
-        conf = json.loads(token_cache.read_text())
-        token_conf = conf['tokens'][account]
-        expires = dateutil.parser.parse(token_conf['expiry'])
-        tzinfo = datetime.datetime.now(datetime.timezone.utc).astimezone().tzinfo
-        now = datetime.datetime.now(tz=tzinfo)
-        is_token_expired = expires < now
-        if not is_token_expired:
-            return token_conf['access_token']
-    except Exception as e:
-        rich.console.Console().print(f"[yellow]Could not load cached Databricks token:[/yellow] {e}")
+        return json.loads(result.stdout)["access_token"]
+    except (json.JSONDecodeError, KeyError):
+        return None

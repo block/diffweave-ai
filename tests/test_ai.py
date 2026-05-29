@@ -111,14 +111,14 @@ def databricks_config(monkeypatch, config_file):
 
 
 def test_llm_init_databricks_cached_token(databricks_config, mocker):
-    mocker.patch("diffweave.ai.load_databricks_token_from_cache", return_value="cached-token")
+    mocker.patch("diffweave.ai.load_databricks_token", return_value="cached-token")
     llm = diffweave.ai.LLM()
     assert llm.model_name == "databricks-llama"
 
 
 def test_llm_init_databricks_triggers_login(databricks_config, mocker):
     mocker.patch(
-        "diffweave.ai.load_databricks_token_from_cache",
+        "diffweave.ai.load_databricks_token",
         side_effect=[None, "new-token"],
     )
     mock_subprocess = mocker.patch("subprocess.run")
@@ -163,43 +163,22 @@ def test_iterate_no_panel(fake_config, mocker, capsys):
     assert "Generated PR description" in capsys.readouterr().out
 
 
-def test_load_databricks_token_valid(monkeypatch, tmp_path):
-    cache_dir = tmp_path / ".databricks"
-    cache_dir.mkdir()
-    future = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=1)
-    token_data = {
-        "tokens": {
-            "my-account": {
-                "access_token": "secret-token",
-                "expiry": future.isoformat(),
-            }
-        }
-    }
-    (cache_dir / "token-cache.json").write_text(json.dumps(token_data))
-    monkeypatch.setattr("pathlib.Path.home", staticmethod(lambda: tmp_path))
-    result = diffweave.ai.load_databricks_token_from_cache("my-account")
-    assert result == "secret-token"
+def test_load_databricks_token_success(mocker):
+    mocker.patch(
+        "subprocess.run",
+        return_value=mocker.Mock(
+            returncode=0,
+            stdout=json.dumps({"access_token": "secret-token", "token_type": "Bearer"}),
+        ),
+    )
+    assert diffweave.ai.load_databricks_token("my-account") == "secret-token"
 
 
-def test_load_databricks_token_expired(monkeypatch, tmp_path):
-    cache_dir = tmp_path / ".databricks"
-    cache_dir.mkdir()
-    past = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=1)
-    token_data = {
-        "tokens": {
-            "my-account": {
-                "access_token": "secret-token",
-                "expiry": past.isoformat(),
-            }
-        }
-    }
-    (cache_dir / "token-cache.json").write_text(json.dumps(token_data))
-    monkeypatch.setattr("pathlib.Path.home", staticmethod(lambda: tmp_path))
-    result = diffweave.ai.load_databricks_token_from_cache("my-account")
-    assert result is None
+def test_load_databricks_token_cli_failure(mocker):
+    mocker.patch("subprocess.run", return_value=mocker.Mock(returncode=1, stdout=""))
+    assert diffweave.ai.load_databricks_token("my-account") is None
 
 
-def test_load_databricks_token_missing_file(monkeypatch, tmp_path):
-    monkeypatch.setattr("pathlib.Path.home", staticmethod(lambda: tmp_path))
-    result = diffweave.ai.load_databricks_token_from_cache("my-account")
-    assert result is None
+def test_load_databricks_token_malformed_output(mocker):
+    mocker.patch("subprocess.run", return_value=mocker.Mock(returncode=0, stdout="not json"))
+    assert diffweave.ai.load_databricks_token("my-account") is None
