@@ -127,40 +127,37 @@ def test_llm_init_databricks_triggers_login(databricks_config, mocker):
     assert llm.model_name == "databricks-llama"
 
 
-def test_iterate_with_feedback(fake_config, mocker):
+def test_generate_commit_message(fake_config, mocker):
     mocker.patch.object(
         diffweave.ai.LLM,
         "query_model",
         new=AsyncMock(return_value="feat: add feature"),
     )
-    mocker.patch("rich.console.Console.input", side_effect=["too vague", ""])
     llm = diffweave.ai.LLM()
-    result = llm.iterate_on_commit_message("status", "context", return_first=False)
+    result = llm.generate_commit_message("status")
     assert result == "feat: add feature"
 
 
-def test_iterate_verbose_prints_prompt(fake_config, mocker, capsys):
-    mocker.patch.object(
-        diffweave.ai.LLM,
-        "query_model",
-        new=AsyncMock(return_value="feat: add feature"),
-    )
-    mocker.patch("rich.console.Console.input", return_value="")
-    llm = diffweave.ai.LLM(verbose=True)
-    llm.iterate_on_commit_message("status", "context", return_first=True)
-    assert "Prompt" in capsys.readouterr().out
+def test_generate_commit_message_includes_iteration_history(fake_config, mocker):
+    captured = {}
 
+    async def fake_query(self, prompt):
+        captured["prompt"] = prompt
+        return "feat: refined message"
 
-def test_iterate_no_panel(fake_config, mocker, capsys):
-    mocker.patch.object(
-        diffweave.ai.LLM,
-        "query_model",
-        new=AsyncMock(return_value="PR title\n\nPR body"),
-    )
+    mocker.patch.object(diffweave.ai.LLM, "query_model", new=fake_query)
     llm = diffweave.ai.LLM()
-    result = llm.iterate_on_commit_message("status", "context", return_first=True, no_panel=True)
-    assert result == "PR title\n\nPR body"
-    assert "Generated PR description" in capsys.readouterr().out
+    result = llm.generate_commit_message(
+        "status",
+        context="some context",
+        attempts=["feat: vague"],
+        feedbacks=["too vague"],
+    )
+    assert result == "feat: refined message"
+    joined = "\n".join(captured["prompt"])
+    assert "some context" in joined
+    assert "too vague" in joined
+    assert "feat: vague" in joined
 
 
 def test_load_databricks_token_success(mocker):

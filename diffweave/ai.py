@@ -3,6 +3,7 @@ import asyncio
 from pathlib import Path
 import json
 import subprocess
+from typing import Optional
 
 import openai
 import rich
@@ -102,55 +103,43 @@ class LLM:
             prompt = "prompt"
         self.system_prompt = (Path(__file__).parent / "prompts" / f"{prompt}.md").read_text()
 
-    def iterate_on_commit_message(
-        self, repo_status_prompt: str, context: str, return_first: bool = False, no_panel: bool = False
+    def generate_commit_message(
+        self,
+        repo_status_prompt: str,
+        context: str = "",
+        attempts: Optional[list[str]] = None,
+        feedbacks: Optional[list[str]] = None,
     ) -> str:
-        message_attempts = []
-        feedback = []
-        user_prompt = [repo_status_prompt, f"\n\nAdditional context provided by the user:\n{context}\n"]
+        """
+        Generate a single commit message for the given repository state.
 
-        loop = asyncio.new_event_loop()
+        This is a one-shot generation: it builds the prompt from the repository
+        status/diff, any optional user context, and the history of previously
+        rejected attempts with their feedback, then returns the model's output.
+        Callers (the interactive TUI, or the scripted CLI paths) own any
+        iteration loop.
 
-        while True:
-            if message_attempts and feedback:
-                for a, f in zip(message_attempts, feedback):
-                    user_prompt.append(
-                        f"Previously REJECTED commit message attempts:\nAttempt: {a}\nUser Feedback: {f}\n---\n"
-                    )
+        Args:
+            repo_status_prompt: The git status and diff text describing changes
+            context: Optional free-form context supplied by the user
+            attempts: Previously generated messages that were rejected
+            feedbacks: Feedback aligned with ``attempts`` explaining each rejection
 
-            if self.verbose:
-                self.console.rule("Prompt")
-                for portion in user_prompt:
-                    self.console.print(portion)
-                self.console.rule()
+        Returns:
+            The generated commit message
+        """
+        attempts = attempts or []
+        feedbacks = feedbacks or []
 
-            with self.console.status("Generating message..."):
-                msg = loop.run_until_complete(self.query_model(user_prompt))
-            self.console.print("[dim]Done.[/dim]")
-            message_attempts.append(msg)
-
-            if no_panel:
-                self.console.rule("[bold]Generated PR description[/bold]")
-                self.console.print(msg)
-                self.console.rule()
-            else:
-                self.console.print(rich.panel.Panel(msg, title="Generated commit message"))
-
-            if return_first:
-                return msg
-
-            self.console.print(
-                rich.text.Text(
-                    "Does this message look fine? <enter> to continue, otherwise provide feedback to improve the message",
-                    style="yellow",
-                )
+        user_prompt = [repo_status_prompt]
+        if context:
+            user_prompt.append(f"\n\nAdditional context provided by the user:\n{context}\n")
+        for attempt, feedback in zip(attempts, feedbacks):
+            user_prompt.append(
+                f"Previously REJECTED commit message attempts:\nAttempt: {attempt}\nUser Feedback: {feedback}\n---\n"
             )
-            we_good = self.console.input("> ").strip()
-            feedback.append(we_good)
-            if we_good == "":
-                break
 
-        return msg
+        return asyncio.run(self.query_model(user_prompt))
 
     async def query_model(self, prompt: list[str]) -> str:
         """
