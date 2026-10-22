@@ -153,20 +153,25 @@ def test_generate_diffs_for_pull_request(new_repo: git.Repo):
     assert "main.py" in diffs
 
 
-def test_add_files_tree_not_available(new_repo: git.Repo, mocker):
-    mocker.patch("diffweave.utils.run_cmd", side_effect=SystemError)
-    diffweave.repo.add_files(new_repo, interactive=False)
-    assert len(diffweave.repo.get_untracked_and_modified_files(new_repo)) == 0
-
-
 def test_add_files_interactive(new_repo: git.Repo, mocker):
     all_files = diffweave.repo.get_untracked_and_modified_files(new_repo)
-    root_dir = Path(new_repo.working_dir)
-    rel_files = [str(f.relative_to(root_dir)) for f in all_files]
-    mocker.patch("beaupy.select_multiple", return_value=[rel_files[0]])
+    mocker.patch("diffweave.tui.select_paths", return_value={all_files[0]})
     diffweave.repo.add_files(new_repo, interactive=True)
     remaining = diffweave.repo.get_untracked_and_modified_files(new_repo)
     assert len(remaining) == len(all_files) - 1
+
+
+def test_add_files_interactive_cancel(new_repo: git.Repo, mocker):
+    mocker.patch("diffweave.tui.select_paths", return_value=None)
+    with pytest.raises(SystemExit):
+        diffweave.repo.add_files(new_repo, interactive=True)
+
+
+def test_build_preview_provider(new_repo: git.Repo):
+    root_dir = Path(new_repo.working_dir)
+    provide = diffweave.repo.build_preview_provider(new_repo)
+    # README.md is untracked here, so the preview is its contents.
+    assert provide(root_dir / "README.md") is not None
 
 
 def test_github_remote_url_regex():

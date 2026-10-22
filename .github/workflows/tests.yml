@@ -28,7 +28,7 @@ jobs:
 
     - name: Ruff
       run: |
-        uvx ruff check
+        uvx ruff@0.17.1 check
 
     - name: Test build
       run: uv build

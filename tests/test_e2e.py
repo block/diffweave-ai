@@ -18,12 +18,14 @@ pytestmark = [
 def real_openai_config(monkeypatch, tmp_path):
     file_path = tmp_path / "config.yaml"
     file_path.write_text(
-        yaml.safe_dump({
-            "type": "token",
-            "model_name": "gpt-4o-mini",
-            "endpoint": "https://api.openai.com/v1",
-            "token": OPENAI_API_KEY,
-        })
+        yaml.safe_dump(
+            {
+                "type": "token",
+                "model_name": "gpt-4o-mini",
+                "endpoint": "https://api.openai.com/v1",
+                "token": OPENAI_API_KEY,
+            }
+        )
     )
     monkeypatch.setattr("diffweave.ai.CONFIG_FILE", file_path)
     yield file_path

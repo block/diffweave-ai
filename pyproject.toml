@@ -4,18 +4,18 @@ authors = [
     {name="Zoë Farmer", email="zfarmer@squareup.com"},
     {name="Chase Hudson", email="chasehudson@squareup.com"},
 ]
-version = "2.0.3"
+version = "2.1.0"
 description = "Assists with git workflows using LLMs."
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
-    "beaupy>=3.10.1",
     "copykitten>=2.0.0",
     "cyclopts>=3.24.0",
     "gitpython>=3.1.44",
     "openai>=1.82.0",
     "python-dateutil>=2.9.0.post0",
     "pyyaml>=6.0.2",
+    "textual>=8.0.0",
 ]
 [dependency-groups]
 dev = [
@@ -27,13 +27,13 @@ dev = [
     "pytest-asyncio>=1.2.0",
     "pytest-cov>=6.1.1",
     "pytest-mock>=3.15.1",
+    "pytest-textual-snapshot>=1.0.0",
     "ruff>=0.11.6",
 ]
 
 [external]
 dependencies = [
     'pkg:generic/git',
-    'pkg:generic/tree',
 ]
 
 [project.scripts]
@@ -84,6 +84,9 @@ line-length = 120
 target-version = "py312"
 
 [tool.ruff.lint]
+# Pin the intended rule set explicitly so an unpinned `uvx ruff` (see
+# .github/workflows/tests.yml) can't drift as ruff changes its defaults.
+select = ["E4", "E7", "E9", "F"]
 ignore = ["F401"]
 
 [tool.ruff.format]
