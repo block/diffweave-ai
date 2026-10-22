@@ -39,6 +39,7 @@ def configure_token_model(model_name: str, endpoint: str, token: str):
         )
     )
 
+
 def configure_databricks_browser_model(model_name: str, account: str):
     config_file = _initialize_config()
     config_file.write_text(
@@ -50,7 +51,6 @@ def configure_databricks_browser_model(model_name: str, account: str):
             }
         )
     )
-
 
 
 class LLM:
@@ -66,13 +66,15 @@ class LLM:
         model_config = yaml.safe_load(config_file.read_text())
 
         if model_config is None:
-            self.console.print(rich.panel.Panel(
-                "No model configured yet. Run one of:\n\n"
-                "  [bold]diffweave-ai set-token-model[/bold] [dim]<model> -t <token>[/dim]\n"
-                "  [bold]diffweave-ai set-databricks-browser-model[/bold] [dim]<model> <account>[/dim]",
-                title="[yellow]Setup required[/yellow]",
-                border_style="yellow",
-            ))
+            self.console.print(
+                rich.panel.Panel(
+                    "No model configured yet. Run one of:\n\n"
+                    "  [bold]diffweave-ai set-token-model[/bold] [dim]<model> -t <token>[/dim]\n"
+                    "  [bold]diffweave-ai set-databricks-browser-model[/bold] [dim]<model> <account>[/dim]",
+                    title="[yellow]Setup required[/yellow]",
+                    border_style="yellow",
+                )
+            )
             raise EnvironmentError
 
         self.model_name = model_config["model_name"]
@@ -89,14 +91,11 @@ class LLM:
                     subprocess.run(["databricks", "auth", "login", "--profile", account, "--host", host])
                     token = load_databricks_token(account)
                     if token is None:
-                        self.console.print(
-                            f"[red]Failed to acquire Databricks token for profile {account!r}.[/red]"
-                        )
+                        self.console.print(f"[red]Failed to acquire Databricks token for profile {account!r}.[/red]")
                         raise EnvironmentError
 
                 self.client = openai.OpenAI(
-                    base_url="https://block-lakehouse-production.cloud.databricks.com/serving-endpoints",
-                    api_key=token
+                    base_url="https://block-lakehouse-production.cloud.databricks.com/serving-endpoints", api_key=token
                 )
 
         if prompt is None:
