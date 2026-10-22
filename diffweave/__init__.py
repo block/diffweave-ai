@@ -14,5 +14,6 @@ Main components:
 
 from .utils import run_cmd
 from . import ai
+from . import tui
 from . import repo
 from .cli import app

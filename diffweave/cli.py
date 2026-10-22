@@ -5,6 +5,7 @@ import webbrowser
 
 import cyclopts
 from cyclopts import Parameter
+import git
 import rich
 import rich.text
 import rich.panel
@@ -68,12 +69,13 @@ def commit(
 
     current_repo = repo.get_repo()
 
-    repo_status, _ = run_cmd("git status")
+    repo_status, _ = run_cmd("git status", show_output=False, silent=True)
 
     if not skip_interaction:
         repo.add_files(current_repo)
 
-    diffs = repo.generate_diffs_with_context(current_repo)
+    with console.status("Reading staged changes..."):
+        diffs = repo.generate_diffs_with_context(current_repo)
 
     if diffs == "":
         console.print(rich.text.Text("No staged changes to commit, quitting!"), style="bold yellow")
@@ -98,20 +100,29 @@ def commit(
             return
 
         try:
-            run_cmd(f"git commit -m {shlex.quote(msg)}")
+            run_cmd(f"git commit -m {shlex.quote(msg)}", show_output=False, silent=True)
         except SystemError:
             console.print("[yellow]Commit failed — re-staging and retrying...[/yellow]")
             repo.add_files(current_repo)
-            run_cmd(f"git commit -m {shlex.quote(msg)}")
+            run_cmd(f"git commit -m {shlex.quote(msg)}", show_output=False, silent=True)
+        try:
+            short_sha = current_repo.head.commit.hexsha[:9]
+            console.print(f"[green]✓ Committed[/green] [dim]{short_sha}[/dim]")
+        except (ValueError, git.GitError):
+            console.print("[green]✓ Committed[/green]")
 
         if skip_interaction:
-            run_cmd("git push")
+            with console.status("Pushing..."):
+                run_cmd("git push", show_output=False, silent=True)
+            console.print("[green]✓ Pushed[/green]")
             return
 
         console.print(rich.text.Text("Push? <enter>/y for yes, anything else for no", style="yellow"))
         should_push = console.input("> ").strip().lower()
         if should_push in ["", "y", "yes"]:
-            run_cmd("git push")
+            with console.status("Pushing..."):
+                run_cmd("git push", show_output=False, silent=True)
+            console.print("[green]✓ Pushed[/green]")
 
         if open_browser:
             url = repo.get_repo_url(current_repo)
@@ -149,7 +160,8 @@ def pr(
 
     current_repo = repo.get_repo()
 
-    commit_summary, diffs = repo.generate_diffs_for_pull_request(current_repo, branch)
+    with console.status("Collecting branch changes..."):
+        commit_summary, diffs = repo.generate_diffs_for_pull_request(current_repo, branch)
 
     console.print(
         rich.text.Text(

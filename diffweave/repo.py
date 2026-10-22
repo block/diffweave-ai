@@ -1,15 +1,21 @@
 import sys  # noqa
 import pathlib
 import re
+import subprocess
 
 import git
 import rich
 import rich.console
 import rich.padding
 import rich.text
-import beaupy
+import rich.syntax
+from rich.console import RenderableType
 
 from . import utils
+from . import tui
+
+#: Maximum number of characters rendered in a single preview pane.
+MAX_PREVIEW_SIZE = 40_000
 
 
 # roughly 4 chars per token
@@ -60,10 +66,6 @@ def get_repo_url(repo: git.Repo) -> str | None:
 
 
 def generate_diffs_with_context(current_repo: git.Repo) -> str:
-    console = rich.console.Console()
-
-    console.print("Generating diffs for staged files...", style="bold")
-
     project_root = pathlib.Path(current_repo.working_dir)
 
     diffs: git.diff.DiffIndex[git.diff.Diff]
@@ -89,12 +91,6 @@ def generate_diffs_with_valid_prior_commit(project_root: pathlib.Path, diffs: gi
             file_was_removed = True
             diff_file = project_root / diff_item.a_path.strip()
 
-        skip_file = False
-
-        if skip_file:
-            continue
-
-        console.print(rich.padding.Padding(rich.text.Text(f"Analyzing file: {diff_file}", style="dim"), (0, 0, 0, 2)))
         try:
             if file_was_removed:
                 file_contents = "<FILE REMOVED>"
@@ -128,7 +124,7 @@ def generate_diffs_with_valid_prior_commit(project_root: pathlib.Path, diffs: gi
 
 
 def generate_diffs_with_fresh_repo(project_root: pathlib.Path) -> str:
-    stdout, stderr = utils.run_cmd("git diff --name-only --cached", show_output=False)
+    stdout, stderr = utils.run_cmd("git diff --name-only --cached", show_output=False, silent=True)
     diff_items = []
     for staged_file_raw in stdout.splitlines():
         staged_file = project_root / staged_file_raw
@@ -148,7 +144,11 @@ def generate_diffs_with_fresh_repo(project_root: pathlib.Path) -> str:
 def generate_diffs_for_pull_request(current_repo: git.Repo, branch: str) -> tuple[str, str]:
     latest_commit = current_repo.head.commit.tree
 
-    commit_summary, _ = utils.run_cmd(f"git log --right-only --cherry-pick --format='raw' {branch}...HEAD")
+    commit_summary, _ = utils.run_cmd(
+        f"git log --right-only --cherry-pick --format='raw' {branch}...HEAD",
+        show_output=False,
+        silent=True,
+    )
 
     other_branch = current_repo.commit(branch)
 
@@ -170,17 +170,63 @@ def get_untracked_and_modified_files(current_repo: git.Repo) -> list[pathlib.Pat
     return all_files
 
 
+def build_preview_provider(current_repo: git.Repo) -> tui.PreviewProvider:
+    """
+    Build a callable that renders a staging preview for a changed file.
+
+    New (untracked) files render their syntax-highlighted contents; modified
+    and deleted files render their unstaged diff against the working tree.
+
+    Args:
+        current_repo: The git repository whose changes are being previewed
+
+    Returns:
+        A callable mapping an absolute file path to a rich renderable
+    """
+    git_repo_root = pathlib.Path(current_repo.working_dir)
+    untracked = {git_repo_root / f for f in current_repo.untracked_files}
+
+    def provide(path: pathlib.Path) -> RenderableType:
+        relative = path.relative_to(git_repo_root)
+        if path in untracked:
+            try:
+                contents = path.read_text()
+            except (OSError, UnicodeDecodeError):
+                return rich.text.Text("<unable to read file contents>", style="dim")
+            if len(contents) >= MAX_PREVIEW_SIZE:
+                return rich.text.Text("<file too large to preview>", style="dim")
+            lexer = rich.syntax.Syntax.guess_lexer(str(path), contents)
+            return rich.syntax.Syntax(contents, lexer, line_numbers=True, word_wrap=False)
+
+        result = subprocess.run(
+            ["git", "-C", str(git_repo_root), "diff", "--", str(relative)],
+            capture_output=True,
+            text=True,
+        )
+        diff_text = result.stdout.strip() or "<no unstaged diff for this file>"
+        if len(diff_text) >= MAX_PREVIEW_SIZE:
+            return rich.text.Text("<diff too large to preview>", style="dim")
+        return rich.syntax.Syntax(diff_text, "diff", word_wrap=False)
+
+    return provide
+
+
 def add_files(current_repo: git.Repo, interactive: bool = True):
     """
     Interactive interface for adding unstaged files to git.
 
-    This function displays all unstaged files in the current git repository
-    and allows the user to select which ones to stage for commit. It uses
-    a tree view to display the files and provides a multi-select interface
-    for choosing files.
+    This function collects every unstaged (untracked or modified) file in the
+    current git repository and, when interactive, opens a Textual checkbox tree
+    so the user can stage individual files or whole folders, previewing each
+    file's diff or contents alongside the tree. Non-interactive callers stage
+    all unstaged files.
+
+    Args:
+        current_repo: The git repository to stage files in
+        interactive: Whether to open the interactive picker (vs. stage all)
 
     Raises:
-        SystemExit: If no files are selected
+        SystemExit: If the user cancels the interactive picker
     """
     console = rich.console.Console()
     git_repo_root = pathlib.Path(current_repo.working_dir)
@@ -191,27 +237,25 @@ def add_files(current_repo: git.Repo, interactive: bool = True):
         num_staged_files = 0
 
     unstaged_files = get_untracked_and_modified_files(current_repo)
-    formatted_paths = "\n".join(str(p.relative_to(git_repo_root)) for p in unstaged_files)
+    if not unstaged_files:
+        return
 
-    try:
-        utils.run_cmd("tree --fromfile", input=formatted_paths)
-    except SystemError:
-        pass
+    console.print(f"Adding unstaged files to the commit... ({num_staged_files:,} already staged)")
 
-    if unstaged_files:
-        console.print(f"Adding unstaged files to the commit... ({num_staged_files:,} already staged)")
-        if interactive:
-            beaupy.Config.raise_on_interrupt = True
-            selections = beaupy.select_multiple(
-                [str(f.relative_to(git_repo_root)) for f in unstaged_files],
-                pagination=True,
-                page_size=5,
-            )
-        else:
-            selections = [str(f.relative_to(git_repo_root)) for f in unstaged_files]
+    if interactive:
+        selected = tui.select_paths(
+            git_repo_root,
+            unstaged_files,
+            preview_provider=build_preview_provider(current_repo),
+        )
+        if selected is None:
+            console.print(rich.text.Text("Cancelled...", style="bold red"))
+            raise SystemExit
+    else:
+        selected = set(unstaged_files)
 
-        if files_to_add := [fpath for f in selections if (fpath := git_repo_root / f).exists()]:
-            current_repo.index.add(files_to_add)
+    if files_to_add := [path for path in selected if path.exists()]:
+        current_repo.index.add([str(path) for path in files_to_add])
 
-        if files_to_remove := [fpath for f in selections if not (fpath := git_repo_root / f).exists()]:
-            current_repo.index.remove(files_to_remove)
+    if files_to_remove := [path for path in selected if not path.exists()]:
+        current_repo.index.remove([str(path) for path in files_to_remove])
