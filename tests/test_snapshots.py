@@ -26,3 +26,19 @@ def test_review_screen_snapshot(snap_compare):
         terminal_size=TERMINAL_SIZE,
         run_before=run_before,
     )
+
+
+def test_result_screen_snapshot(snap_compare):
+    async def run_before(pilot):
+        # Generate, then commit-and-push (fake, instant) to reach the result screen.
+        await pilot.pause()
+        await pilot.pause()
+        await pilot.press("ctrl+p")
+        await pilot.pause()
+        await pilot.pause()
+
+    assert snap_compare(
+        preview.build_review_app(),
+        terminal_size=TERMINAL_SIZE,
+        run_before=run_before,
+    )

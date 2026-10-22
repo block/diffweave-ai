@@ -23,11 +23,13 @@ import pathlib
 from typing import Callable, List, Optional, Set
 
 from rich.console import RenderableType
+from rich.panel import Panel
 from rich.text import Text
 from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Input, Label, RichLog, Static, TextArea, Tree
 from textual.widgets.tree import TreeNode
 
@@ -419,13 +421,325 @@ def select_paths(
     ).run()
 
 
-class CommitReviewApp(App[Optional[str]]):
-    """Review, iterate on, and commit/push a generated commit message.
+class ReviewScreen(Screen):
+    """Editable review screen: message, iteration history, refine box, buttons.
 
-    The left pane holds the editable message; the right pane logs the history
-    of rejected attempts and their feedback. A refine box regenerates the
-    message (folding optional context into the first iteration), and stylish
-    buttons commit or commit-and-push the current message in place.
+    The left pane holds the editable commit message; the right pane logs the
+    history of rejected attempts and their feedback. The refine box regenerates
+    the message (folding optional context into the first iteration), and the
+    button row commits or commits-and-pushes. Committing transitions to the
+    :class:`ResultScreen`.
+
+    Attributes
+    ----------
+    BINDINGS
+        Keyboard shortcuts mirroring the buttons.
+    """
+
+    BINDINGS = [
+        Binding("ctrl+r", "regenerate", "Regenerate"),
+        Binding("ctrl+s", "commit", "Commit"),
+        Binding("ctrl+p", "commit_push", "Commit & push"),
+        Binding("escape", "cancel", "Cancel"),
+    ]
+
+    def __init__(self) -> None:
+        """Initialise per-screen busy state."""
+        super().__init__()
+        self._busy = False
+
+    def compose(self) -> ComposeResult:
+        """Yield the header, split message/history body, controls, and footer.
+
+        Yields
+        ------
+        textual.widget.Widget
+            The composed review widgets.
+        """
+        yield Header()
+        with Horizontal(id="review-top"):
+            with Vertical(id="message-col"):
+                yield Label("Commit message (editable)")
+                yield TextArea(id="message")
+            with Vertical(id="history-col"):
+                yield Label("Iterations")
+                yield RichLog(id="history", wrap=True, markup=True)
+        yield Input(placeholder="Refine and press Enter to regenerate · empty Enter commits", id="refine")
+        with Horizontal(id="buttons"):
+            yield Button("Regenerate", id="regen")
+            yield Button("Commit", id="commit", variant="success")
+            yield Button("Commit & Push", id="push", variant="primary")
+            yield Button("Cancel", id="cancel", variant="error")
+        yield Static("", id="status")
+        yield Footer()
+
+    def on_mount(self) -> None:
+        """Set the subtitle, start generation, and focus the refine box."""
+        self.app.sub_title = "review commit message"
+        self.run_generate()
+        self.query_one("#refine", Input).focus()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Dispatch button presses to the matching action.
+
+        Parameters
+        ----------
+        event
+            The button press event.
+        """
+        actions = {
+            "regen": self.action_regenerate,
+            "commit": self.action_commit,
+            "push": self.action_commit_push,
+            "cancel": self.action_cancel,
+        }
+        action = actions.get(event.button.id)
+        if action is not None:
+            action()
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        """Commit on an empty refine box, otherwise regenerate with feedback.
+
+        Parameters
+        ----------
+        event
+            The input submission event.
+        """
+        if self._busy:
+            return
+        if self.query_one("#refine", Input).value.strip():
+            self.action_regenerate()
+        else:
+            self.action_commit()
+
+    def action_regenerate(self) -> None:
+        """Record the current message as rejected, then regenerate."""
+        if self._busy:
+            return
+        refine = self.query_one("#refine", Input).value.strip()
+        current = self.query_one("#message", TextArea).text.strip()
+        if current:
+            self.app.attempts.append(current)
+            self.app.feedbacks.append(refine or "(no specific feedback)")
+            history = self.query_one("#history", RichLog)
+            history.write(f"[bold]Attempt {len(self.app.attempts)} — rejected[/bold]")
+            history.write(current)
+            if refine:
+                history.write(f"[italic]↳ {refine}[/italic]")
+            history.write("")
+        self.query_one("#refine", Input).value = ""
+        self.run_generate()
+
+    def action_commit(self) -> None:
+        """Commit the current message without pushing."""
+        self._open_result(push=False)
+
+    def action_commit_push(self) -> None:
+        """Commit the current message and push."""
+        self._open_result(push=True)
+
+    def action_cancel(self) -> None:
+        """Exit the app, reporting no commit."""
+        self.app.exit(None)
+
+    def _open_result(self, push: bool) -> None:
+        """Validate the message and hand off to the result screen.
+
+        Parameters
+        ----------
+        push
+            Whether the result screen should push after committing.
+        """
+        if self._busy:
+            return
+        message = self.query_one("#message", TextArea).text.strip()
+        if not message:
+            self._set_error("Commit message is empty.")
+            return
+        self.app.push_screen(ResultScreen(message, push))
+
+    @work(exclusive=True)
+    async def run_generate(self) -> None:
+        """Generate a message off the UI thread and load it into the editor."""
+        self._set_busy("Generating message…")
+        try:
+            message = await asyncio.to_thread(self.app.generate_fn, list(self.app.attempts), list(self.app.feedbacks))
+        except Exception as exc:  # noqa: BLE001 - surfaced to the user in the status line
+            self._set_error(f"Generation failed: {exc}")
+            return
+        self.query_one("#message", TextArea).text = message
+        self._set_idle("Ready — edit, refine, or commit.")
+        self.query_one("#refine", Input).focus()
+
+    def _set_busy(self, text: str) -> None:
+        """Mark the screen busy, disable action buttons, and show status.
+
+        Parameters
+        ----------
+        text
+            Status text to display.
+        """
+        self._busy = True
+        self._enable_actions(False)
+        self._status(text, "ansi_yellow")
+
+    def _set_idle(self, text: str) -> None:
+        """Clear the busy state, re-enable actions, and show status.
+
+        Parameters
+        ----------
+        text
+            Status text to display.
+        """
+        self._busy = False
+        self._enable_actions(True)
+        self._status(text, "ansi_green")
+
+    def _set_error(self, text: str) -> None:
+        """Clear the busy state, re-enable actions, and show an error line.
+
+        Parameters
+        ----------
+        text
+            Error text to display.
+        """
+        self._busy = False
+        self._enable_actions(True)
+        self._status(text, "ansi_red")
+
+    def _status(self, text: str, color: str) -> None:
+        """Render ``text`` in the status line with the given ANSI color.
+
+        Parameters
+        ----------
+        text
+            Status text.
+        color
+            A Textual ANSI color name (e.g. ``ansi_green``).
+        """
+        self.query_one("#status", Static).update(Text(text, style=color))
+
+    def _enable_actions(self, enabled: bool) -> None:
+        """Enable or disable the action buttons (Cancel stays available).
+
+        Parameters
+        ----------
+        enabled
+            Whether to enable the regenerate/commit buttons.
+        """
+        for button_id in ("regen", "commit", "push"):
+            self.query_one(f"#{button_id}", Button).disabled = not enabled
+
+
+class ResultScreen(Screen):
+    """Final screen showing the accepted message and live commit/push updates.
+
+    Parameters
+    ----------
+    message
+        The accepted commit message to display and commit.
+    push
+        Whether to push after a successful commit.
+
+    Attributes
+    ----------
+    BINDINGS
+        Enter closes once finished; Escape goes back to editing on failure.
+    """
+
+    BINDINGS = [
+        Binding("enter", "close", "Close"),
+        Binding("escape", "back", "Back"),
+    ]
+
+    def __init__(self, message: str, push: bool) -> None:
+        """Store the message, push intent, and terminal state.
+
+        Parameters
+        ----------
+        message
+            The accepted commit message.
+        push
+            Whether to push after committing.
+        """
+        super().__init__()
+        self._message = message
+        self._push = push
+        self._outcome: Optional[str] = None
+        self._finished = False
+
+    def compose(self) -> ComposeResult:
+        """Yield the header, message panel, status log, and footer.
+
+        Yields
+        ------
+        textual.widget.Widget
+            The composed result widgets.
+        """
+        yield Header()
+        yield Static(Panel(self._message, title="Commit message"), id="result-message")
+        yield RichLog(id="result-log", markup=True, wrap=True)
+        yield Footer()
+
+    def on_mount(self) -> None:
+        """Set the subtitle and run the commit/push sequence."""
+        self.app.sub_title = "committing"
+        self.run_actions()
+
+    @work(exclusive=True)
+    async def run_actions(self) -> None:
+        """Commit (and optionally push) off the UI thread, logging each step."""
+        log = self.query_one("#result-log", RichLog)
+
+        log.write("[yellow]Committing…[/yellow]")
+        try:
+            await asyncio.to_thread(self.app.commit_fn, self._message)
+        except Exception as exc:  # noqa: BLE001 - surfaced to the user in the log
+            log.write(f"[red]Commit failed: {exc}[/red]")
+            log.write("[dim]Esc to go back and edit · Enter to close[/dim]")
+            self._finished = True
+            return
+        self._outcome = "committed"
+        log.write("[green]✓ Committed[/green]")
+
+        if self._push:
+            log.write("[yellow]Pushing…[/yellow]")
+            try:
+                await asyncio.to_thread(self.app.push_fn)
+            except Exception as exc:  # noqa: BLE001 - surfaced to the user in the log
+                log.write(f"[red]Push failed: {exc}[/red] [dim](push manually)[/dim]")
+                log.write("[dim]Enter to close[/dim]")
+                self._finished = True
+                return
+            self._outcome = "pushed"
+            log.write("[green]✓ Pushed[/green]")
+
+        log.write("[dim]Enter to close[/dim]")
+        self._finished = True
+
+    def action_close(self) -> None:
+        """Close the app once the commit sequence has finished."""
+        if not self._finished:
+            return
+        self.app.exit(self._outcome)
+
+    def action_back(self) -> None:
+        """Return to the editor on failure, else close with the outcome."""
+        if not self._finished:
+            return
+        if self._outcome is None:
+            self.app.pop_screen()
+        else:
+            self.app.exit(self._outcome)
+
+
+class CommitReviewApp(App[Optional[str]]):
+    """Two-screen app to review/iterate a message then commit and push it.
+
+    Hosts the :class:`ReviewScreen` (editable message + iteration) and the
+    :class:`ResultScreen` (accepted message + live commit/push updates). Git
+    side effects run via the injected callables, keeping this module
+    git-agnostic.
 
     Parameters
     ----------
@@ -440,18 +754,11 @@ class CommitReviewApp(App[Optional[str]]):
     Attributes
     ----------
     CSS
-        Stylesheet describing the split review layout.
-    BINDINGS
-        Keyboard shortcuts mirroring the buttons.
-
-    Notes
-    -----
-    The app returns ``"committed"`` or ``"pushed"`` to report what it did, or
-    ``None`` if the user cancelled before committing. Git side effects run via
-    the injected callables, keeping this module git-agnostic.
+        Stylesheet shared across both screens.
+    ENABLE_COMMAND_PALETTE
+        Disabled so ``ctrl+p`` commits-and-pushes instead of opening the palette.
     """
 
-    #: Disable Textual's built-in command palette so ctrl+p commits-and-pushes.
     ENABLE_COMMAND_PALETTE = False
 
     CSS = """
@@ -492,14 +799,17 @@ class CommitReviewApp(App[Optional[str]]):
         height: 1;
         padding: 0 1;
     }
-    """
 
-    BINDINGS = [
-        Binding("ctrl+r", "regenerate", "Regenerate"),
-        Binding("ctrl+s", "commit", "Commit"),
-        Binding("ctrl+p", "commit_push", "Commit & push"),
-        Binding("escape", "cancel", "Cancel"),
-    ]
+    #result-message {
+        height: auto;
+        padding: 1;
+    }
+
+    #result-log {
+        height: 1fr;
+        padding: 0 1;
+    }
+    """
 
     def __init__(
         self,
@@ -507,7 +817,7 @@ class CommitReviewApp(App[Optional[str]]):
         on_commit: CommitFn,
         on_push: PushFn,
     ) -> None:
-        """Initialise the review app with its generation and git callables.
+        """Initialise the app with its generation and git callables.
 
         Parameters
         ----------
@@ -519,214 +829,17 @@ class CommitReviewApp(App[Optional[str]]):
             Push callable (raises on failure).
         """
         super().__init__()
-        self._generate = generate
-        self._on_commit = on_commit
-        self._on_push = on_push
-        self._attempts: List[str] = []
-        self._feedbacks: List[str] = []
-        self._busy = False
-        self._committed = False
-
-    def compose(self) -> ComposeResult:
-        """Yield the header, split message/history body, controls, and footer.
-
-        Yields
-        ------
-        textual.widget.Widget
-            The composed review widgets.
-        """
-        yield Header()
-        with Horizontal(id="review-top"):
-            with Vertical(id="message-col"):
-                yield Label("Commit message (editable)")
-                yield TextArea(id="message")
-            with Vertical(id="history-col"):
-                yield Label("Iterations")
-                yield RichLog(id="history", wrap=True, markup=True)
-        yield Input(placeholder="Refine: describe a change, press Enter to regenerate…", id="refine")
-        with Horizontal(id="buttons"):
-            yield Button("Regenerate", id="regen")
-            yield Button("Commit", id="commit", variant="success")
-            yield Button("Commit & Push", id="push", variant="primary")
-            yield Button("Cancel", id="cancel", variant="error")
-        yield Static("", id="status")
-        yield Footer()
+        self.generate_fn = generate
+        self.commit_fn = on_commit
+        self.push_fn = on_push
+        self.attempts: List[str] = []
+        self.feedbacks: List[str] = []
 
     def on_mount(self) -> None:
-        """Apply the theme, title, and kick off the first message generation."""
+        """Apply the terminal theme/title and show the review screen."""
         self.theme = TERMINAL_THEME
         self.title = "diffweave"
-        self.sub_title = "review commit message"
-        self.run_generate()
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        """Dispatch button presses to the matching action.
-
-        Parameters
-        ----------
-        event
-            The button press event.
-        """
-        actions = {
-            "regen": self.action_regenerate,
-            "commit": self.action_commit,
-            "push": self.action_commit_push,
-            "cancel": self.action_cancel,
-        }
-        action = actions.get(event.button.id)
-        if action is not None:
-            action()
-
-    def on_input_submitted(self, event: Input.Submitted) -> None:
-        """Regenerate when the refine box is submitted with Enter.
-
-        Parameters
-        ----------
-        event
-            The input submission event.
-        """
-        self.action_regenerate()
-
-    def action_regenerate(self) -> None:
-        """Record the current message as rejected, then regenerate."""
-        if self._busy or self._committed:
-            return
-        refine = self.query_one("#refine", Input).value.strip()
-        current = self.query_one("#message", TextArea).text.strip()
-        if current:
-            self._attempts.append(current)
-            self._feedbacks.append(refine or "(no specific feedback)")
-            history = self.query_one("#history", RichLog)
-            history.write(f"[bold]Attempt {len(self._attempts)} — rejected[/bold]")
-            history.write(current)
-            if refine:
-                history.write(f"[italic]↳ {refine}[/italic]")
-            history.write("")
-        self.query_one("#refine", Input).value = ""
-        self.run_generate()
-
-    def action_commit(self) -> None:
-        """Commit the current message without pushing."""
-        self.run_commit(push=False)
-
-    def action_commit_push(self) -> None:
-        """Commit the current message and push."""
-        self.run_commit(push=True)
-
-    def action_cancel(self) -> None:
-        """Exit, reporting the commit if one already happened, else cancel."""
-        self.exit("committed" if self._committed else None)
-
-    @work(exclusive=True)
-    async def run_generate(self) -> None:
-        """Generate a message off the UI thread and load it into the editor."""
-        self._set_busy("Generating message…")
-        try:
-            message = await asyncio.to_thread(self._generate, list(self._attempts), list(self._feedbacks))
-        except Exception as exc:  # noqa: BLE001 - surfaced to the user in the status line
-            self._set_error(f"Generation failed: {exc}")
-            return
-        self.query_one("#message", TextArea).text = message
-        self._set_idle("Ready — edit, refine, or commit.")
-        self.query_one("#refine", Input).focus()
-
-    @work(exclusive=True)
-    async def run_commit(self, push: bool) -> None:
-        """Commit (and optionally push) the edited message off the UI thread.
-
-        Parameters
-        ----------
-        push
-            Whether to push after a successful commit.
-        """
-        if self._busy or self._committed:
-            return
-        message = self.query_one("#message", TextArea).text.strip()
-        if not message:
-            self._set_error("Commit message is empty.")
-            return
-
-        self._set_busy("Committing…")
-        try:
-            await asyncio.to_thread(self._on_commit, message)
-        except Exception as exc:  # noqa: BLE001 - surfaced to the user in the status line
-            self._set_error(f"Commit failed: {exc}")
-            return
-        self._committed = True
-
-        if not push:
-            self.exit("committed")
-            return
-
-        self._set_busy("Pushing…")
-        try:
-            await asyncio.to_thread(self._on_push)
-        except Exception as exc:  # noqa: BLE001 - surfaced to the user in the status line
-            self._set_error(f"Committed, but push failed ({exc}). Push manually, then Cancel.")
-            return
-        self.exit("pushed")
-
-    def _set_busy(self, text: str) -> None:
-        """Mark the app busy, disable action buttons, and show a status line.
-
-        Parameters
-        ----------
-        text
-            Status text to display.
-        """
-        self._busy = True
-        self._enable_actions(False)
-        self._status(text, "ansi_yellow")
-
-    def _set_idle(self, text: str) -> None:
-        """Clear the busy state, re-enable actions, and show a status line.
-
-        Parameters
-        ----------
-        text
-            Status text to display.
-        """
-        self._busy = False
-        self._enable_actions(True)
-        self._status(text, "ansi_green")
-
-    def _set_error(self, text: str) -> None:
-        """Clear the busy state, re-enable actions, and show an error line.
-
-        Parameters
-        ----------
-        text
-            Error text to display.
-        """
-        self._busy = False
-        self._enable_actions(True)
-        self._status(text, "ansi_red")
-
-    def _status(self, text: str, color: str) -> None:
-        """Render ``text`` in the status line with the given ANSI color.
-
-        Parameters
-        ----------
-        text
-            Status text.
-        color
-            A Textual ANSI color name (e.g. ``ansi_green``).
-        """
-        self.query_one("#status", Static).update(Text(text, style=color))
-
-    def _enable_actions(self, enabled: bool) -> None:
-        """Enable or disable the action buttons (Cancel stays available).
-
-        Once a commit has succeeded the action buttons remain disabled so the
-        change cannot be committed twice.
-
-        Parameters
-        ----------
-        enabled
-            Whether to enable the regenerate/commit buttons.
-        """
-        for button_id in ("regen", "commit", "push"):
-            self.query_one(f"#{button_id}", Button).disabled = self._committed or not enabled
+        self.push_screen(ReviewScreen())
 
 
 def review_commit(
