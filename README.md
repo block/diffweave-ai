@@ -4,7 +4,19 @@ DiffWeave is a tool that automatically generates meaningful Git commit messages 
 
 [Documentation available here](https://block.github.io/diffweave-ai/)
 
-![Demo](docs/images/demo.png)
+## Screenshots
+
+**Interactive staging** — a checkbox file tree with a live diff/contents preview pane (shown side-by-side on wide terminals, tree-only on narrow ones):
+
+![DiffWeave staging TUI](docs/screenshots/1-staging-tree.svg)
+
+**Commit review** — edit the generated message, refine it with feedback, and regenerate, all in place:
+
+![DiffWeave commit review TUI](docs/screenshots/2-commit-review.svg)
+
+**Commit & push** — the commit and push run live inside the TUI with status updates:
+
+![DiffWeave commit result TUI](docs/screenshots/3-commit-result.svg)
 
 ## Installation & Quick Start
 
@@ -55,10 +67,10 @@ uvx diffweave-ai
 This will:
 
 - Show the current `git status`.
-- Prompt you to stage files interactively.
+- Open an interactive staging TUI — a checkbox file tree with a live diff/contents preview pane.
 - Generate a commit message using your configured model.
-- Let you review and refine the message before committing.
-- Run `git commit`, then prompt whether to `git push`.
+- Open a review TUI where you can edit the message, refine it with feedback, and regenerate.
+- Run `git commit` and `git push` live from the review screen.
 - Optionally open the repository in a browser (requires `--open-browser`).
 
 If you prefer a simpler, natural-language style instead of Conventional Commits, pass `--simple`:
@@ -96,6 +108,8 @@ uvx diffweave-ai pr --branch my-base-branch
 ## Features
 
 - AI-powered commit message generation based on staged diffs
+- Interactive staging TUI with a checkbox file tree and live diff/contents preview
+- In-place commit-review TUI: edit, refine with feedback, regenerate, commit, and push
 - Pull request description generation with automatic clipboard copy
 - Interactive or non-interactive workflows
 - Token-based (OpenAI-compatible) and Databricks browser authentication

@@ -3,7 +3,19 @@
 DiffWeave is a tool for automatically generating commit messages and pull request descriptions using large language models (LLMs).
 The goal is for this tool to be intuitive to use and to help you write meaningful commit messages.
 
-![png](images/demo.png)
+## Screenshots
+
+**Interactive staging** — a checkbox file tree with a live diff/contents preview pane (shown side-by-side on wide terminals, tree-only on narrow ones):
+
+![DiffWeave staging TUI](screenshots/1-staging-tree.svg)
+
+**Commit review** — edit the generated message, refine it with feedback, and regenerate, all in place:
+
+![DiffWeave commit review TUI](screenshots/2-commit-review.svg)
+
+**Commit & push** — the commit and push run live inside the TUI with status updates:
+
+![DiffWeave commit result TUI](screenshots/3-commit-result.svg)
 
 For details on setting up models and the configuration file, see the
 [Getting Started](installation.md) page.
@@ -27,10 +39,10 @@ uv run diffweave-ai [OPTIONS]
 Running `diffweave-ai` with no subcommand starts the interactive commit flow:
 
 - Shows the current git status.
-- Prompts you to stage files interactively.
+- Opens an interactive staging TUI — a checkbox file tree with a live diff/contents preview pane.
 - Generates a commit message using your configured model.
-- Lets you review and refine the message.
-- Runs `git commit`, then prompts whether to `git push`.
+- Opens a review TUI to edit, refine with feedback, and regenerate the message.
+- Runs `git commit` and `git push` live from the review screen.
 - Optionally opens the repo in your browser if `--open-browser` is set.
 
 Flags:
