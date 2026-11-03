@@ -5,7 +5,6 @@
 Ensure you have the following dependencies installed:
 
 * [git](https://git-scm.com/downloads/linux)
-* [tree](https://linux.die.net/man/1/tree) *(optional — used for pretty file-tree display when staging)*
 * [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
 ## Installation
